@@ -1,0 +1,38 @@
+# coding: utf-8
+# vim: set syntax=ytest
+
+import time
+import requests
+import json
+from uptest import *
+
+ENDPOINT = '127.0.0.1:1995'
+
+
+=== Test 1: update upstream
+--- setup
+time.sleep(0.5)
+requests.post("http://%s/upstream/test" % ENDPOINT,
+    data=json.dumps({"servers":[
+        {"host":"127.0.0.1","port":9091,"weight":11,"max_fails":3,"fail_timeout":1},
+        {"host":"127.0.0.1","port":9092,"weight":22,"max_fails":2,"fail_timeout":2},
+        {"host":"127.0.0.1","port":9093,"weight":33,"max_fails":1,"fail_timeout":3}
+        ]}))
+
+time.sleep(2)
+
+--- request
+GET /status HTTP/1.1
+Host: {{ENDPOINT}}
+
+--- response
+HTTP/1.1 200 OK
+Server: slardar/{{SLARDAR_VERSION}}
+
+--- response_eval
+
+assert len(__resp.json["cls:test"][0]) == 3
+assert __resp.json["cls:test"][0][0]['max_fails'] == 3
+assert __resp.json["cls:test"][0][0]['fail_timeout'] == 1
+assert __resp.json["cls:test"][0][1]['weight'] == 22
+assert __resp.json["cls:test"][0][2]['server'] == 'test:127.0.0.1:9093'

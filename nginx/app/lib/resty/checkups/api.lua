@@ -215,9 +215,8 @@ end
 
 
 function _M.create_checker()
-    local ckey = base.CHECKUP_TIMER_KEY
-    local val, err = mutex:get(ckey)
-    if val then
+    if not base.upstream.initialized then
+        log(ERR, "create checker failed, call prepare_checker in init_by_lua")
         return
     end
 
@@ -234,11 +233,6 @@ function _M.create_checker()
 
     if err then
         log(WARN, "failed to get key from shm: ", err)
-        return
-    end
-
-    if not base.upstream.initialized then
-        log(ERR, "create checker failed, call prepare_checker in init_by_lua")
         return
     end
 

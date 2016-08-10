@@ -1,0 +1,39 @@
+# coding: utf-8
+# vim: set syntax=ytest
+
+import time
+import requests
+import json
+from uptest import *
+
+LUA_ENDPOINT = '127.0.0.1:1995'
+ENDPOINT = '127.0.0.1:9091'
+
+=== Test 1:  post file
+--- setup
+requests.post("http://%s/lua/script.test" % LUA_ENDPOINT,
+    data="return slardar.exit(errno.EXIT_TRY_CODE)")
+
+--- request
+POST / HTTP/1.1
+Host: {{ENDPOINT}}
+
+--- response
+HTTP/1.1 200 OK
+Server: slardar/{{SLARDAR_VERSION}}
+
+
+=== Test 2:  post file to load
+--- setup
+requests.post("http://%s/lua/script.test" % LUA_ENDPOINT,
+    data="return slardar.exit(errno.EXIT_TRY_CODE)")
+requests.put("http://%s/lua/script.test" % LUA_ENDPOINT)
+time.sleep(1)
+
+--- request
+POST / HTTP/1.1
+Host: {{ENDPOINT}}
+
+--- response
+HTTP/1.1 400 Bad Request
+X-Error-Code: {{errno.EXIT_TRY_CODE}}

@@ -11,8 +11,6 @@ local ngx_match     = ngx.re.match
 
 local slardar = slardar
 
-checkups.create_checker()
-
 local result = {}
 
 

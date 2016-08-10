@@ -10,10 +10,13 @@ include util/ver.cfg
 
 ROOTDIR= $(shell pwd)
 
+ifeq (dev,$(firstword $(MAKECMDGOALS)))
+PREFIX= $(ROOTDIR)
+DEV= 1
+endif
+
 ifndef PREFIX
 PREFIX= /usr/local/slardar
-else
-PREFIX= $(PREFIX)/slardar
 endif
 
 ifeq ($(shell uname -s), Darwin)
@@ -67,6 +70,7 @@ install: install-cjson install-cmsgpack
 	$(MKDIR) $(INSTALL_DIRS) $(PREFIX)/nginx/conf/slardar
 	@echo "==== Installing Slardar $(V_SLARDAR) to $(PREFIX) ===="
 	cd $(NGINX_DIR) && $(MAKE) install
+ifndef DEV
 	$(INSTALL_F) nginx/app/lib/resty/*.lua $(INSTALL_LIBDIR)/resty
 	$(INSTALL_F) nginx/app/lib/ngx/*.lua $(INSTALL_LIBDIR)/ngx
 	$(INSTALL_F) nginx/app/lib/resty/core/*.lua $(INSTALL_LIBDIR)/resty/core
@@ -76,7 +80,10 @@ install: install-cjson install-cmsgpack
 	$(INSTALL_F) nginx/app/src/modules/*.lua $(INSTALL_SRCDIR)/modules
 	$(INSTALL_F) nginx/conf/*.conf $(PREFIX)/nginx/conf
 	$(INSTALL_F) nginx/conf/slardar/*.conf $(PREFIX)/nginx/conf/slardar
+endif
 	@echo "==== Successfully installed Slardar $(V_SLARDAR) to $(PREFIX) ===="
+
+dev: configure all install
 
 ##############################################################################
 
@@ -136,6 +143,18 @@ clean:
 .PHONY: deps luajit cjson cmsgpack clean luasocket
 
 ##############################################################################
+
+start:
+	./nginx/sbin/nginx
+	@echo "NGINX start"
+
+stop:
+	-kill -QUIT `cat ./nginx/logs/nginx.pid`
+	@echo "NGINX stop"
+
+reload:
+	-kill -HUP `cat ./nginx/logs/nginx.pid`
+	@echo "NGINX reload"
 
 test:
 	util/lua-releng

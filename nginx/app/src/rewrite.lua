@@ -7,9 +7,6 @@ local mload     = require "modules.load"
 
 local slardar = slardar
 
--- only one checkups timer is active among all the nginx workers
-checkups.create_checker()
-
 local env = {
     ngx=ngx,
     errno=errno,

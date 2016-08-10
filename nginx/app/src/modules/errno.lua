@@ -14,6 +14,8 @@ local _M = {
     HTTP_MEDIA_TYPE_ERR = {415, "media type error"},
     HTTP_TOO_MANY_REQS  = {429, "to many requests"},
     HTTP_SERVICE_UNAVAILABLE = {503, "service unavailable"},
+
+    EXIT_TRY_CODE       = {40099999, "exit try code"},
 }
 
 
