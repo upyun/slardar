@@ -1,0 +1,34 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+sub file_contains ($$);
+
+for my $file (map glob, qw{ *.lua nginx/app/lib/*.lua nginx/app/lib/*/*.lua nginx/app/lib/*/*/*.lua nginx/app/src/*.lua nginx/app/src/[!s]*/*.lua nginx/app/src/[!s]*/*/*.lua }) {
+    print "Checking use of Lua global variables in file $file ...\n";
+    my $output = `luac5.1 -p -l $file | grep ETGLOBAL | grep -vE ' require\$| loadfile\$| type\$| tostring\$| error\$| ngx\$| ndk\$| jit\$| setmetatable\$| getmetatable\$| loadstring\$| string\$| table\$| io\$| os\$| print\$| tonumber\$| math\$| pcall\$| xpcall\$| unpack\$| pairs\$| ipairs\$| assert\$| module\$| package\$| coroutine\$| [gs]etfenv\$| next\$| select\$| rawset\$| rawget\$| debug\$| slardar\$| ac_free\$'`;
+    if ($output) {
+        print $output;
+        exit 1;
+    }
+    #file_contains($file, "attempt to write to undeclared variable");
+    system("grep -H -n -E --color --exclude errorpage.lua '.{120}' $file");
+}
+
+sub file_contains ($$) {
+    my ($file, $regex) = @_;
+    open my $in, $file
+        or die "Cannot open $file fo reading: $!\n";
+    my $content = do { local $/; <$in> };
+    close $in;
+    #print "$content";
+    return scalar ($content =~ /$regex/);
+}
+
+if (-d 'test') {
+    for my $file (map glob, qw{ test/*.t test/*/*.t test/*/*/*.t }) {
+        system(qq{grep -H -n --color -E '\\--- ?(ONLY|LAST)' $file});
+    }
+}
+

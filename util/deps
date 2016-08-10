@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+
+ROOTDIR=`pwd`
+DEPSDIR=$ROOTDIR/deps
+PATCHES=$ROOTDIR/patches
+
+. util/ver.cfg
+
+if [ ! -d $DEPSDIR ]; then
+    mkdir $DEPSDIR
+fi
+
+cd $DEPSDIR
+
+get() {
+    tarname=$1-$2.tar.gz
+    url=$3
+    if [ ! -s $tarname ]; then
+        wget --no-check-certificate $url -O $tarname || exit 1
+        if [ $? == 0 ]; then
+            tar -xzf $tarname || exit 1
+            echo -e "GET "$tarname" [\033[0;32;40mOK\033[0m]\n"
+        fi
+    fi
+}
+
+get LuaJIT $V_LUAJIT https://github.com/openresty/luajit2/archive/v$V_LUAJIT.tar.gz || exit 1
+get nginx $V_NGINX http://nginx.org/download/nginx-$V_NGINX.tar.gz || exit 1
+get lua-nginx-module $V_NGX_LUA_MODULE https://github.com/chaoslawful/lua-nginx-module/archive/v$V_NGX_LUA_MODULE.tar.gz || exit 1
+get pcre $V_PCRE https://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-$V_PCRE.tar.gz || exit 1
+get lua-cjson $V_LUA_CJSON http://www.kyne.com.au/~mark/software/download/lua-cjson-$V_LUA_CJSON.tar.gz || exit 1
+get lua-cmsgpack $V_CMSGPACK https://github.com/cloudflare/lua-cmsgpack/archive/$V_CMSGPACK.tar.gz || exit 1
+get luasocket $V_LUASOCKET https://github.com/diegonehab/luasocket/archive/v$V_LUASOCKET.tar.gz || exit 1
+
+
+# patch for nginx
+cd nginx-$V_NGINX
+
+if [ ! -f server_header.patch ]; then
+    echo "applying the server_header patch for nginx"
+    cp $PATCHES/nginx-$V_NGINX-server_header.patch server_header.patch || exit 1
+    sed $"s/SLARDAR_VERSION/\"$V_SLARDAR_MAIN\"/" server_header.patch \
+        > server_header.patch.tmp && mv -f server_header.patch.tmp server_header.patch || exit 1
+    patch -p1 < server_header.patch || exit 1
+fi
+
+cd .. || exit 1
