@@ -12,3 +12,5 @@ ADD nginx /src/nginx
 EXPOSE 8080 1995
 
 RUN cd /src && make configure && make && make install
+
+CMD ["/usr/local/slardar/nginx/sbin/nginx", "-g", "daemon off;"]
