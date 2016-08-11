@@ -236,7 +236,13 @@ function _M.create_checker()
         return
     end
 
-    local lock = base.get_lock(ckey)
+    -- Pass timeout=0 to lock:new, so the lock method can return immediately
+    -- without waiting if it cannot acquire the lock right away.
+    -- By doing this, we can use lock:lock() in init_worker phase
+    -- because no ngx.sleep call is made, which is disabled in the context.
+    local lock_timeout = get_phase() == "init_worker" and 0 or nil
+
+    local lock = base.get_lock(ckey, lock_timeout)
     if not lock then
         log(WARN, "failed to acquire the lock: ", err)
         return

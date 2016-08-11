@@ -187,8 +187,8 @@ function _M.try_server(skey, ups, srv, callback, args, try)
 end
 
 
-function _M.get_lock(key)
-    local lock = lock:new("locks")
+function _M.get_lock(key, timeout)
+    local lock = lock:new("locks", {timeout=timeout})
     local elapsed, err = lock:lock(key)
     if not elapsed then
         log(WARN, "failed to acquire the lock: ", key, ", ", err)
