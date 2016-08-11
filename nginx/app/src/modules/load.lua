@@ -126,7 +126,7 @@ local function load_syncer(premature)
             if type(version_dict[skey]) == "table" then
                 worker_version = version_dict[skey]["version"]
             end
-            if worker_version and worker_version ~= sh_value.version then
+            if package.loaded[skey] and worker_version ~= sh_value.version then
                 log(INFO, skey, " version changed")
                 version_dict[skey] = nil
                 package.loaded[skey] = nil
