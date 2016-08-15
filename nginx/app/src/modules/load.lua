@@ -22,6 +22,7 @@ local timer_at      = ngx.timer.at
 local md5           = ngx.md5
 local log           = ngx.log
 local ERR           = ngx.ERR
+local WARN          = ngx.WARN 
 local INFO          = ngx.INFO
 local load_dict     = ngx.shared.load
 
@@ -230,7 +231,7 @@ function _M.init(config)
             end
         end
     else
-        log(ERR, "no code in consul")
+        log(WARN, "no code in consul")
     end
 
     local ok, err = load_dict:safe_set(VERSION_KEY, 0)
