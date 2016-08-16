@@ -3,7 +3,6 @@
 
 import time
 import requests
-import json
 from uptest import *
 
 LUA_ENDPOINT = '127.0.0.1:1995'
@@ -16,14 +15,11 @@ requests.post("http://%s/lua/script.test" % LUA_ENDPOINT,
 
 --- request
 POST / HTTP/1.1
-Host: {{ENDPOINT}}
+Host: test
 
 --- response
 HTTP/1.1 200 OK
 Server: slardar/{{SLARDAR_VERSION}}
-
---- error
-.*module 'script.test' not found.*
 
 
 === Test 2:  post file to load
@@ -35,7 +31,7 @@ time.sleep(1)
 
 --- request
 POST / HTTP/1.1
-Host: {{ENDPOINT}}
+Host: test
 
 --- response
 HTTP/1.1 400 Bad Request

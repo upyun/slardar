@@ -10,7 +10,7 @@ IMG_DIR = os.path.join(SLARDAR_DIR, 'tests/img')
 # env for ytest, run cases in random order
 RANDOM = True
 STOP_SERVER = '''ps aux | grep nginx | grep -v grep |
-              grep -v tail | grep -v vim | awk \'{print $2}\' |
+              grep -v tail | grep -v vi | awk \'{print $2}\' |
               xargs kill -9 > /dev/null 2>&1'''
 PRE_START_SERVER = '''mkdir -p tests/servroot &&
                cp -r nginx/conf tests/servroot &&
@@ -18,7 +18,7 @@ PRE_START_SERVER = '''mkdir -p tests/servroot &&
                cp -r nginx/app tests/servroot &&
                cp -r luajit tests/luajit &&
                mkdir -p tests/servroot/logs'''
-START_SERVER = 'nginx/sbin/nginx -p tests/servroot 1> /dev/null'
+START_SERVER = 'nginx/sbin/nginx -p tests/servroot 1> /dev/null 2>&1'
 RELOAD_SERVER = 'nginx/sbin/nginx -s reload -p tests/servroot 1> /dev/null'
 LOG_PATH = 'tests/servroot/logs/error.log'
 CONFIG_PATH = 'tests/servroot/app/etc/config.lua'

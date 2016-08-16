@@ -22,8 +22,8 @@ local timer_at      = ngx.timer.at
 local md5           = ngx.md5
 local log           = ngx.log
 local ERR           = ngx.ERR
-local WARN          = ngx.WARN 
 local INFO          = ngx.INFO
+local WARN          = ngx.WARN
 local load_dict     = ngx.shared.load
 
 local SKEYS_KEY     = "lua:skeys"
@@ -327,6 +327,8 @@ function _M.set_code(skey, body)
     if not ok then
         return nil, str_format('failed to set key: %s in load, err: %s', skey, err)
     end
+
+    log(INFO, skey, " new code setted")
     return true
 end
 

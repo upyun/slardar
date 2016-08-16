@@ -113,7 +113,7 @@ docker build -t slardar .
 **3. Run**
 
 ```
-docker run -d -P --name slardar slardar
+docker run -d --net=host --name slardar slardar
 ```
 
 
@@ -452,7 +452,13 @@ Run Test
 
 This bundle contains only tests for Slardar, the bundled components are tested in their own project.
 
-You can run `make test` to run tests for Slardar.
+You can run tests for Slardar by the following commands.
+
+```
+docker run -d --net=host consul agent -dev -bind=127.0.0.1
+make dev
+make test
+```
 
 
 [Back to TOC](#table-of-contents)
