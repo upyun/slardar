@@ -207,7 +207,7 @@ An example Consul keys and their corresponding values are listed as follows,
 
 For the above example, Slardar will load `modules.abc`, `script.test` as lua code and `node-dev.example` as upstream on startup.
 
-You can set `"enable": false`(default is `true`) in your upstream configuration to disable periodical heartbeats to servers by checkups.
+You can set `"enable": false`(default is `true`) in your upstream configuration to disable periodical heartbeats to servers by [checkups](https://github.com/upyun/lua-resty-checkups).
 
 When Slardar is running, you can use `slardar.myargs.arg0` to get `arg0` and `slardar.myargs.arg1` to get `arg1`. The config will be cached for `config_positive_ttl` seconds. That is to say, when you change the value of `myargs` in consul, it will take effect in `config_positive_ttl` seconds.
 
