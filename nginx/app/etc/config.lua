@@ -21,9 +21,6 @@ _M.global = {
     -- sync upstream list from shared memory every 1s
     shd_config_timer_interval = 1,
 
-    -- the key prefix for upstreams in shared memory
-    shd_config_prefix = "shd_v1",
-
     -- If no_consul is set to true, Slardar will continue start or reload
     -- even if getting data from consul failed.
     -- Remember to set this value to false when you need to read persisted

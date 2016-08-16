@@ -154,9 +154,6 @@ _M.global = {
     
     -- sync upstream list from shared memory every 1s
     shd_config_timer_interval = 1,
-    
-    -- the key prefix for upstreams in shared memory
-    shd_config_prefix = "shd_v1",
 }
 
 _M.consul = {
