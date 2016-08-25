@@ -126,6 +126,9 @@ function _M.init(config)
 
     for _, key in ipairs(upstream_keys) do repeat
         local skey = str_sub(key, #key_prefix + 11)
+        if #skey == 0 then
+            break
+        end
         -- upstream already exists in config.lua
         if config[skey] then
             break
