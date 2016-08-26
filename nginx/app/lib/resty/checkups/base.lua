@@ -36,7 +36,7 @@ local _M = {
 
 local ngx_upstream
 
-local CHECKUP_TIMER_KEY = "checkups:timer"
+local CHECKUP_TIMER_KEY = "checkups:timer:" .. os.time()
 _M.CHECKUP_TIMER_KEY = CHECKUP_TIMER_KEY
 local CHECKUP_LAST_CHECK_TIME_KEY = "checkups:last_check_time"
 _M.CHECKUP_LAST_CHECK_TIME_KEY = CHECKUP_LAST_CHECK_TIME_KEY
