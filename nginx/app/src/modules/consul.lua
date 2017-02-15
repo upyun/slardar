@@ -36,7 +36,7 @@ local function get_servers(cluster, key)
             elseif code == 200 and body then
                 return parse_body(body)
             end
-            ngx.log(ngx.ERR, str_format("get config from %s failed", url))
+            ngx.log(ngx.WARN, str_format("get config from %s failed", url))
         end
     end
 end
