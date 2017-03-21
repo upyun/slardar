@@ -36,7 +36,7 @@ local _M = {
 
 local ngx_upstream
 
-local CHECKUP_TIMER_KEY = "checkups:timer:" .. os.time()
+local CHECKUP_TIMER_KEY = "checkups:timer"
 _M.CHECKUP_TIMER_KEY = CHECKUP_TIMER_KEY
 local CHECKUP_LAST_CHECK_TIME_KEY = "checkups:last_check_time"
 _M.CHECKUP_LAST_CHECK_TIME_KEY = CHECKUP_LAST_CHECK_TIME_KEY
@@ -60,6 +60,11 @@ local ups_status_timer_created
 _M.ups_status_timer_created = ups_status_timer_created
 local cluster_status = {}
 _M.cluster_status = cluster_status
+
+
+_M.is_tab = function(t) return type(t) == "table" end
+_M.is_str = function(t) return type(t) == "string" end
+_M.is_num = function(t) return type(t) == "number" end
 
 
 local function _gen_key(skey, srv)
@@ -153,7 +158,7 @@ function _M.check_res(res, check_opts)
         local typ = check_opts.typ
 
         if typ == "http" and type(res) == "table"
-            and res.status then
+        and res.status then
             local status = tonumber(res.status)
             local http_opts = check_opts.http_opts
             if http_opts and http_opts.statuses and
@@ -204,6 +209,13 @@ function _M.release_lock(lock)
     if not ok then
         log(WARN, "failed to unlock: ", err)
     end
+end
+
+
+function _M.get_peer_status(skey, srv)
+    local peer_key = PEER_STATUS_PREFIX .. _gen_key(skey, srv)
+    local peer_status = cjson.decode(state:get(peer_key))
+    return peer_status
 end
 
 

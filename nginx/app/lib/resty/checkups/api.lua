@@ -3,10 +3,11 @@
 local cjson      = require "cjson.safe"
 
 local consistent_hash = require "resty.checkups.consistent_hash"
-local round_robin= require "resty.checkups.round_robin"
-local heartbeat  = require "resty.checkups.heartbeat"
-local dyconfig   = require "resty.checkups.dyconfig"
-local base       = require "resty.checkups.base"
+local round_robin     = require "resty.checkups.round_robin"
+local heartbeat       = require "resty.checkups.heartbeat"
+local dyconfig        = require "resty.checkups.dyconfig"
+local base            = require "resty.checkups.base"
+local try             = require "resty.checkups.try"
 
 local str_format = string.format
 
@@ -27,21 +28,6 @@ local _M = {
     _VERSION = "0.20",
     STATUS_OK = base.STATUS_OK, STATUS_UNSTABLE = base.STATUS_UNSTABLE, STATUS_ERR = base.STATUS_ERR
 }
-
-_M.reset_round_robin_state = round_robin.reset_round_robin_state
-_M.try_cluster_round_robin = round_robin.try_cluster_round_robin
-
-
-local function try_cluster(skey, ups, cls, callback, opts, try_again)
-    local mode = ups.mode
-    local args = opts.args or {}
-    if mode == "hash" then
-        local hash_key = opts.hash_key or ngx.var.uri
-        return consistent_hash.try_cluster_consistent_hash(skey, ups, cls, callback, args, hash_key)
-    else
-        return round_robin.try_cluster_round_robin_(skey, ups, cls, callback, args, try_again)
-    end
-end
 
 
 function _M.feedback_status(skey, host, port, failed)
@@ -76,54 +62,7 @@ function _M.ready_ok(skey, callback, opts)
         return nil, "unknown skey " .. skey
     end
 
-    local res, err, cont, try_again
-
-    -- try by key
-    if opts.cluster_key then
-        for _, cls_key in ipairs({ opts.cluster_key.default,
-            opts.cluster_key.backup }) do
-            local cls = ups.cluster[cls_key]
-            if cls then
-                res, cont, err = try_cluster(skey, ups, cls, callback, opts, try_again)
-                if res then
-                    return res, err
-                end
-
-
-                -- continue to next key?
-                if not cont then break end
-
-                if type(cont) == "number" then
-                    if cont < 1 then
-                        break
-                    else
-                        try_again = cont
-                    end
-                end
-            end
-        end
-        return nil, err or "no upstream available"
-    end
-
-    -- try by level
-    for level, cls in ipairs(ups.cluster) do
-        res, cont, err = try_cluster(skey, ups, cls, callback, opts, try_again)
-        if res then
-            return res, err
-        end
-
-        -- continue to next level?
-        if not cont then break end
-
-        if type(cont) == "number" then
-            if cont < 1 then
-                break
-            else
-                try_again = cont
-            end
-        end
-    end
-    return nil, err or "no upstream available"
+    return try.try_cluster(skey, callback, opts)
 end
 
 
@@ -147,7 +86,6 @@ function _M.prepare_checker(config)
 
             for level, cls in pairs(base.upstream.checkups[skey].cluster) do
                 base.extract_servers_from_upstream(skey, cls)
-                _M.reset_round_robin_state(cls)
             end
             if base.upstream.checkup_shd_sync_enable then
                 if shd_config and worker_id then
@@ -195,6 +133,8 @@ function _M.get_status()
     all_status.conf_hash = base.upstream.conf_hash or cjson.null
     all_status.shd_config_version = base.upstream.shd_config_version or cjson.null
 
+    all_status.config_timer = dyconfig.get_timer_key_status()
+
     return all_status
 end
 
@@ -215,6 +155,11 @@ end
 
 
 function _M.create_checker()
+    local phase = get_phase()
+    if phase ~= "init_worker" then
+        error("create_checker must be called in init_worker phase")
+    end
+
     if not base.upstream.initialized then
         log(ERR, "create checker failed, call prepare_checker in init_by_lua")
         return
@@ -225,60 +170,35 @@ function _M.create_checker()
         dyconfig.create_shd_config_syncer()
     end
 
-    local ckey = base.CHECKUP_TIMER_KEY
-    local val, err = mutex:get(ckey)
-    if val then
-        return
-    end
-
-    if err then
-        log(WARN, "failed to get key from shm: ", err)
-        return
-    end
-
-    -- Pass timeout=0 to lock:new, so the lock method can return immediately
-    -- without waiting if it cannot acquire the lock right away.
-    -- By doing this, we can use lock:lock() in init_worker phase
-    -- because no ngx.sleep call is made, which is disabled in the context.
-    local lock_timeout = get_phase() == "init_worker" and 0 or nil
-
-    local lock = base.get_lock(ckey, lock_timeout)
-    if not lock then
-        log(WARN, "failed to acquire the lock: ", err)
-        return
-    end
-
-    val, err = mutex:get(ckey)
-    if val then
-        base.release_lock(lock)
-        return
-    end
-
-    -- create active checkup timer
-    local ok, err = ngx.timer.at(0, heartbeat.active_checkup)
-    if not ok then
-        log(WARN, "failed to create timer: ", err)
-        base.release_lock(lock)
-        return
-    end
-
     if base.upstream.ups_status_sync_enable and not base.ups_status_timer_created then
         local ok, err = ngx.timer.at(0, base.ups_status_checker)
         if not ok then
             log(WARN, "failed to create ups_status_checker: ", err)
-            base.release_lock(lock)
             return
         end
         base.ups_status_timer_created = true
     end
 
+    if not worker_id then
+        log(ERR, "ngx_http_lua_module version too low, no heartbeat timer will be created")
+        return
+    elseif worker_id() ~= 0 then
+        return
+    end
+
+    -- only worker 0 will create heartbeat timer
+    local ok, err = ngx.timer.at(0, heartbeat.active_checkup)
+    if not ok then
+        log(WARN, "failed to create timer: ", err)
+        return
+    end
+
+    local ckey = base.CHECKUP_TIMER_KEY
     local overtime = base.upstream.checkup_timer_overtime
     local ok, err = mutex:set(ckey, 1, overtime)
     if not ok then
         log(WARN, "failed to update shm: ", err)
     end
-
-    base.release_lock(lock)
 end
 
 
@@ -339,9 +259,9 @@ function _M.delete_upstream(skey)
 
     ok, err = dyconfig.do_delete_upstream(skey)
 
-	base.release_lock(lock)
+    base.release_lock(lock)
 
-	return ok, err
+    return ok, err
 end
 
 

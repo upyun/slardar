@@ -1,9 +1,9 @@
 local cjson         = require "cjson.safe"
 
-local round_robin   = require "resty.checkups.round_robin"
 local base          = require "resty.checkups.base"
 
 local worker_id     = ngx.worker.id
+local worker_count  = ngx.worker.count
 local update_time   = ngx.update_time
 local mutex         = ngx.shared.mutex
 local state         = ngx.shared.state
@@ -38,9 +38,26 @@ local function shd_config_syncer(premature)
         return
     end
 
+    local interval = base.upstream.shd_config_timer_interval
+
+    local overtime = base.upstream.checkup_timer_overtime
+
     local lock, err = base.get_lock(base.SKEYS_KEY)
     if not lock then
-        log(WARN, "failed to acquire the lock: ", err)
+        log(WARN, "upstream updating, failed to acquire the lock: ", base.SKEYS_KEY, ", ", err)
+        local ok, err = ngx.timer.at(interval, shd_config_syncer)
+        if not ok then
+            log(ERR, "failed to create timer: ", err)
+            local ok, err = mutex:set(ckey, nil)
+            if not ok then
+                log(ERR, "failed to update shm: ", err)
+            end
+        else
+            local ok, err = mutex:set(ckey, 1, overtime)
+            if not ok then
+                log(ERR, "failed to update shm: ", err)
+            end
+        end
         return
     end
 
@@ -70,12 +87,6 @@ local function shd_config_syncer(premature)
                     end
 
                     base.upstream.checkups[skey].cluster = base.table_dup(shd_servers)
-
-                    local ups = base.upstream.checkups[skey].cluster
-                    -- only reset for rr cluster
-                    for level, cls in ipairs(ups) do
-                        round_robin.reset_round_robin_state(cls)
-                    end
                 elseif err then
                     success = false
                     log(WARN, "failed to get from shm: ", err)
@@ -92,9 +103,7 @@ local function shd_config_syncer(premature)
 
     base.release_lock(lock)
 
-    local interval = base.upstream.shd_config_timer_interval
 
-    local overtime = base.upstream.checkup_timer_overtime
     local ok, err = mutex:set(ckey, 1, overtime)
     if not ok then
         log(WARN, "failed to update shm: ", err)
@@ -102,7 +111,7 @@ local function shd_config_syncer(premature)
 
     local ok, err = ngx.timer.at(interval, shd_config_syncer)
     if not ok then
-        log(WARN, "failed to create timer: ", err)
+        log(ERR, "failed to create timer: ", err)
         local ok, err = mutex:set(ckey, nil)
         if not ok then
             log(WARN, "failed to update shm: ", err)
@@ -192,7 +201,7 @@ function _M.do_delete_upstream(skey)
 
         ok, err = shd_config:delete(key)
         if err then
-            log(WARN, "failed to set new servers to shm")
+            log(WARN, "failed to delete servers in shm")
             return false, err
         end
 
@@ -217,28 +226,43 @@ end
 
 
 function _M.create_shd_config_syncer()
-    local ckey = base.CHECKUP_TIMER_KEY .. ":shd_config:" .. worker_id()
-    local val, err = mutex:get(ckey)
-    if val then
-        return
-    end
-
-    if err then
-        log(WARN, "failed to get key from shm: ", err)
-        return
-    end
-
     local ok, err = ngx.timer.at(0, shd_config_syncer)
     if not ok then
-        log(WARN, "failed to create shd_config timer: ", err)
+        log(ERR, "failed to create shd_config timer: ", err)
         return
     end
 
     local overtime = base.upstream.checkup_timer_overtime
+    local ckey = base.CHECKUP_TIMER_KEY .. ":shd_config:" .. worker_id()
     local ok, err = mutex:set(ckey, 1, overtime)
     if not ok then
         log(WARN, "failed to update shm: ", err)
     end
+end
+
+
+function _M.get_timer_key_status()
+    if not worker_count then
+        log(WARN, "can not get worker count, please upgrade lua-nginx-module to 0.9.20 or higher")
+        return
+    end
+
+    local timer_status = {}
+    local count = worker_count()
+    for i=0, count-1 do
+        local key = "worker-" .. i
+        local ckey = base.CHECKUP_TIMER_KEY .. ":shd_config:" .. i
+        local val, err = mutex:get(ckey)
+        if err then
+            timer_status[key] = err
+        elseif val then
+            timer_status[key] = "alive"
+        else
+            timer_status[key] = "dead"
+        end
+    end
+
+    return timer_status
 end
 
 

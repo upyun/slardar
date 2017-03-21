@@ -2,7 +2,6 @@
 
 local cjson         = require "cjson.safe"
 
-local lock          = require "resty.lock"
 local base          = require "resty.checkups.base"
 
 local str_sub       = string.sub
