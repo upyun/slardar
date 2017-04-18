@@ -14,6 +14,10 @@ local tab_sort      = table.sort
 local tab_concat    = table.concat
 local tab_insert    = table.insert
 local unpack        = unpack
+local tostring      = tostring
+local ipairs        = ipairs
+local pairs         = pairs
+local type          = type
 
 local log           = ngx.log
 local ERR           = ngx.ERR
@@ -159,7 +163,7 @@ function _M.check_res(res, check_opts)
 
         if typ == "http" and type(res) == "table"
         and res.status then
-            local status = tonumber(res.status)
+            local status = tostring(res.status)
             local http_opts = check_opts.http_opts
             if http_opts and http_opts.statuses and
                 http_opts.statuses[status] == false then

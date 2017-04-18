@@ -59,5 +59,45 @@ _M.consul = {
     },
 }
 
+_M.load_init = {
+    -- load_init module name for lua-resty-load
+    module_name = "resty.consul.load"
+}
+
+
+_M.logger = {
+
+    timeout = 2,
+
+    -- enable checkups heartbeat.
+    enable = true,
+
+    -- node info in the log message
+    node_type = "slardar_access",
+    node_host = "127.0.0.1",
+
+    config = {
+
+        -- config for lua-resty-logger-socket
+        flush_limit = 4096,
+        drop_limit = 1024 * 1024, -- 1MB
+        pool_size = 10,
+        retry_interval = 100,
+        max_retry_times = 3,
+
+        -- upstream name for lua-resty-checkups
+        ups_name = "logger",
+    },
+
+    cluster = {
+        {
+            servers = {
+                -- change these to your own log server addresses
+                { host = "127.0.0.1", port = 3100 },
+            },
+        },
+    },
+}
+
 
 return _M

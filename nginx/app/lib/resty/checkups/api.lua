@@ -2,8 +2,6 @@
 
 local cjson      = require "cjson.safe"
 
-local consistent_hash = require "resty.checkups.consistent_hash"
-local round_robin     = require "resty.checkups.round_robin"
 local heartbeat       = require "resty.checkups.heartbeat"
 local dyconfig        = require "resty.checkups.dyconfig"
 local base            = require "resty.checkups.base"
@@ -22,6 +20,10 @@ local WARN       = ngx.WARN
 local INFO       = ngx.INFO
 local worker_id  = ngx.worker.id
 local get_phase  = ngx.get_phase
+local type       = type
+local next       = next
+local pairs      = pairs
+local ipairs     = ipairs
 
 
 local _M = {
@@ -94,7 +96,7 @@ function _M.prepare_checker(config)
                     if phase == "init" or
                         phase == "init_worker" and worker_id() == 0 then
                         local key = dyconfig._gen_shd_key(skey)
-                        shd_config:set(key, cjson.encode(base.upstream.checkups[skey].cluster))
+                        shd_config:set(key, cjson.encode(base.upstream.checkups[skey]))
                     end
                     skeys[skey] = 1
                 else
@@ -209,39 +211,65 @@ function _M.select_peer(skey)
 end
 
 
+local function gen_upstream(skey, upstream)
+    local ups = upstream
+    if upstream.cluster then
+        -- all upstream
+        if type(upstream.cluster) ~= "table" then
+            return nil, "cluster invalid"
+        end
+    else
+        -- only servers
+        local dyupstream, err = dyconfig.do_get_upstream(skey)
+        if err then
+            return nil, err
+        end
+
+        dyupstream = dyupstream or {}
+        dyupstream.cluster = upstream
+        ups = dyupstream
+    end
+
+    -- check servers
+    local ok
+    for level, cls in pairs(ups.cluster) do
+        if not cls or not next(cls) then
+            return nil, "can not update empty level"
+        end
+
+        local servers = cls.servers
+        if not servers or not next(servers) then
+            return nil, "can not update empty servers"
+        end
+
+        for _, srv in ipairs(servers) do
+            local ok, err = dyconfig.check_update_server_args(skey, level, srv)
+            if not ok then
+                return nil, err
+            end
+        end
+    end
+
+    return ups
+end
+
+
 function _M.update_upstream(skey, upstream)
     if not upstream or not next(upstream) then
         return false, "can not set empty upstream"
     end
 
-    local ok, err
-    for level, cls in pairs(upstream) do
-        if not cls or not next(cls) then
-            return false, "can not update empty level"
-        end
-
-        local servers = cls.servers
-        if not servers or not next(servers) then
-            return false, "can not update empty servers"
-        end
-
-        for _, srv in ipairs(servers) do
-            ok, err = dyconfig.check_update_server_args(skey, level, srv)
-            if not ok then
-                return false, err
-            end
-        end
-    end
-
-    local lock
-
-    lock, err = base.get_lock(base.SKEYS_KEY)
+    local lock, err = base.get_lock(base.SKEYS_KEY)
     if not lock then
         log(WARN, "failed to acquire the lock: ", err)
         return false, err
     end
 
-    ok, err = dyconfig.do_update_upstream(skey, upstream)
+    local ups, err = gen_upstream(skey, upstream)
+    local ok = false
+    if not err then
+        ok, err = dyconfig.do_update_upstream(skey, ups)
+    end
 
     base.release_lock(lock)
 

@@ -9,6 +9,7 @@ local max        = math.max
 local sqrt       = math.sqrt
 local floor      = math.floor
 local tab_insert = table.insert
+local tostring   = tostring
 
 local update_time     = ngx.update_time
 local now             = ngx.now
@@ -104,7 +105,7 @@ local function prepare_callbacks(skey, opts)
     local try_limit = opts.try or ups.try or srvs_cnt
     local retry_cb = function(res)
         if is_tab(res) and res.status and is_tab(statuses) then
-            if statuses[res.status] ~= false then
+            if statuses[tostring(res.status)] ~= false then
                 return REQUEST_SUCCESS
             end
         elseif res then
