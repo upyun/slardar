@@ -69,6 +69,7 @@ _M.cluster_status = cluster_status
 _M.is_tab = function(t) return type(t) == "table" end
 _M.is_str = function(t) return type(t) == "string" end
 _M.is_num = function(t) return type(t) == "number" end
+_M.is_nul = function(t) return t == nil or t == ngx.null end
 
 
 local function _gen_key(skey, srv)
@@ -218,8 +219,8 @@ end
 
 function _M.get_peer_status(skey, srv)
     local peer_key = PEER_STATUS_PREFIX .. _gen_key(skey, srv)
-    local peer_status = cjson.decode(state:get(peer_key))
-    return peer_status
+    local peer_status = state:get(peer_key)
+    return not _M.is_nul(peer_status) and cjson.decode(peer_status) or nil
 end
 
 
@@ -236,10 +237,8 @@ function _M.get_upstream_status(skey)
         ups_status[level] = {}
         if servers and type(servers) == "table" and #servers > 0 then
             for _, srv in ipairs(servers) do
-                local peer_key = _gen_key(skey, srv)
-                local peer_status = cjson.decode(state:get(PEER_STATUS_PREFIX ..
-                                                           peer_key)) or {}
-                peer_status.server = peer_key
+                local peer_status = _M.get_peer_status(skey, srv) or {}
+                peer_status.server = _gen_key(skey, srv)
                 peer_status["weight"] = srv.weight
                 peer_status["max_fails"] = srv.max_fails
                 peer_status["fail_timeout"] = srv.fail_timeout

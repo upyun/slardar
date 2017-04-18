@@ -1,4 +1,4 @@
-local checkups = require "resty.checkups"
+local checkups = require "resty.checkups.api"
 
 local concat                = table.concat
 local tcp                   = ngx.socket.tcp

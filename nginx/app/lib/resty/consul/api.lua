@@ -1,7 +1,7 @@
 -- Copyright (C) 2016 Libo Huang (huangnauh), UPYUN Inc.
 local http         = require "socket.http"
 local httpipe      = require "resty.httpipe"
-local checkups     = require "resty.checkups"
+local checkups     = require "resty.checkups.api"
 
 local pairs        = pairs
 local type         = type

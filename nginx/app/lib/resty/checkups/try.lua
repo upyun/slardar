@@ -88,6 +88,11 @@ local function prepare_callbacks(skey, opts)
             return false
         end
 
+        if ups.enable == false or (ups.enable == nil
+            and base.upstream.default_heartbeat_enable == false) then
+            return base.get_srv_status(skey, srv) == base.STATUS_OK
+        end
+
         local peer_status = base.get_peer_status(skey, srv)
         if (not peer_status or peer_status.status ~= base.STATUS_ERR)
         and base.get_srv_status(skey, srv) == base.STATUS_OK then
