@@ -69,7 +69,7 @@ _M.logger = {
 
     timeout = 2,
 
-    -- enable checkups heartbeat.
+    -- enable logger.
     enable = true,
 
     -- node info in the log message
