@@ -3,6 +3,7 @@
 local cjson         = require "cjson.safe"
 
 local lock          = require "resty.lock"
+local subsystem     = require "resty.subsystem"
 
 local str_format    = string.format
 local str_sub       = string.sub
@@ -27,10 +28,11 @@ local localtime     = ngx.localtime
 local re_find       = ngx.re.find
 local re_match      = ngx.re.match
 local re_gmatch     = ngx.re.gmatch
-local mutex         = ngx.shared.mutex
-local state         = ngx.shared.state
-local shd_config    = ngx.shared.config
 local now           = ngx.now
+
+local get_shm       = subsystem.get_shm
+local get_shm_key   = subsystem.get_shm_key
+local state         = get_shm("state")
 
 
 local _M = {
@@ -198,7 +200,7 @@ end
 
 
 function _M.get_lock(key, timeout)
-    local lock = lock:new("locks", {timeout=timeout})
+    local lock = lock:new(get_shm_key("locks"), {timeout=timeout})
     local elapsed, err = lock:lock(key)
     if not elapsed then
         log(WARN, "failed to acquire the lock: ", key, ", ", err)

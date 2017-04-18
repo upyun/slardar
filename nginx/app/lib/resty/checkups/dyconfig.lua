@@ -1,13 +1,12 @@
 local cjson         = require "cjson.safe"
 
 local base          = require "resty.checkups.base"
+local subsystem     = require "resty.subsystem"
 
 local worker_id     = ngx.worker.id
 local worker_count  = ngx.worker.count
 local update_time   = ngx.update_time
-local mutex         = ngx.shared.mutex
-local state         = ngx.shared.state
-local shd_config    = ngx.shared.config
+
 local log           = ngx.log
 local ERR           = ngx.ERR
 local WARN          = ngx.WARN
@@ -15,6 +14,11 @@ local INFO          = ngx.INFO
 
 local str_format    = string.format
 local type          = type
+
+
+local get_shm       = subsystem.get_shm
+local mutex         = get_shm("mutex")
+local shd_config    = get_shm("config")
 
 local _M = {
     _VERSION = "0.11",

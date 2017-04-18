@@ -6,13 +6,11 @@ local heartbeat       = require "resty.checkups.heartbeat"
 local dyconfig        = require "resty.checkups.dyconfig"
 local base            = require "resty.checkups.base"
 local try             = require "resty.checkups.try"
+local subsystem       = require "resty.subsystem"
 
 local str_format = string.format
 
 local localtime  = ngx.localtime
-local mutex      = ngx.shared.mutex
-local state      = ngx.shared.state
-local shd_config = ngx.shared.config
 local log        = ngx.log
 local now        = ngx.now
 local ERR        = ngx.ERR
@@ -24,6 +22,11 @@ local type       = type
 local next       = next
 local pairs      = pairs
 local ipairs     = ipairs
+
+local get_shm    = subsystem.get_shm
+local mutex      = get_shm("mutex")
+local state      = get_shm("state")
+local shd_config = get_shm("config")
 
 
 local _M = {

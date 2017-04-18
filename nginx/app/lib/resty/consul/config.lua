@@ -3,6 +3,7 @@ local cmsgpack     = require "cmsgpack"
 local shcache      = require "resty.shcache"
 local utils        = require "resty.consul.utils"
 local api          = require "resty.consul.api"
+local subsystem    = require "resty.subsystem"
 
 local ipairs       = ipairs
 local pairs        = pairs
@@ -10,6 +11,9 @@ local next         = next
 local tonumber     = tonumber
 local setmetatable = setmetatable
 local str_sub      = string.sub
+local ngx_subsystem= ngx.config.subsystem
+
+local get_shm_key  = subsystem.get_shm_key
 
 local _M = {}
 
@@ -41,6 +45,7 @@ local function load_config(config, key)
         { positive_ttl = consul.config_positive_ttl or 30,
           negative_ttl = consul.config_negative_ttl or 3,
           name = cache_label,
+          lock_shdict = get_shm_key("locks"),
         }
     )
 
@@ -49,19 +54,48 @@ local function load_config(config, key)
     return data
 end
 
+
+function _M.value2upstream(body)
+    if type(body) ~= "table" then
+        return nil, "body invalid"
+    end
+
+    local servers = body.servers
+    if type(servers) ~= "table" then
+        return nil, "servers invalid"
+    end
+    body.servers = nil
+
+    local upstream
+    if next(body) then
+        upstream = body
+        upstream.cluster = {{ servers = servers }}
+    else
+        upstream = {{ servers = servers }}
+    end
+
+    return upstream
+end
+
+
 -- get server in the init_by_lua* context for the lua-resty-checkups Lua Library
 function _M.init(config)
     local consul = config.consul or {}
     local key_prefix = consul.config_key_prefix or ""
     local consul_cluster = consul.cluster or {}
-    local opts = {decode=utils.parse_body, default={}}
-    local upstream_keys = api.get_kv_blocking(consul_cluster, key_prefix .. "upstreams?keys", opts)
+    local opts = {decode=utils.parse_body, default={} }
+    local upstreams_prefix = "upstreams"
+    if ngx_subsystem ~= "http" then
+        upstreams_prefix = ngx_subsystem .. "_upstreams"
+    end
+
+    local upstream_keys = api.get_kv_blocking(consul_cluster, key_prefix .. upstreams_prefix .. "?keys", opts)
     if not upstream_keys then
         return false
     end
 
     for _, key in ipairs(upstream_keys) do repeat
-        local skey = str_sub(key, #key_prefix + 11)
+        local skey = str_sub(key, #key_prefix + #upstreams_prefix + 2)
         if #skey == 0 then
             break
         end

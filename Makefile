@@ -52,6 +52,8 @@ configure: deps luajit
 		--with-pcre=$(ROOTDIR)/deps/pcre-$(V_PCRE) \
 		--with-ld-opt="-Wl,-rpath,$(LUAJIT_LIB),-rpath,$(INSTALL_LIBDIR)" \
 		--with-http_stub_status_module \
+		--with-stream \
+		--add-module=$(ROOTDIR)/deps/stream-lua-nginx-module-$(V_STREAM_LUA_NGX_MODULE) \
 		--add-module=$(ROOTDIR)/deps/lua-nginx-module-$(V_NGX_LUA_MODULE) \
 		--prefix=$(PREFIX)/nginx
 	@echo "==== Successfully configure Nginx $(V_NGINX) ===="
