@@ -139,19 +139,16 @@ function _M.init(config)
             return false
         end
 
-        if not check_servers(servers["servers"]) then
-            return false
+        config[skey] = {}
+
+        if check_servers(servers["servers"]) then
+            local cls = {
+                servers = servers["servers"],
+                keepalive = tonumber(servers["keepalive"]),
+                try =  tonumber(servers["try"]),
+            }
+            config[skey]["cluster"] = { cls }
         end
-
-        local cls = {
-            servers = servers["servers"],
-            keepalive = tonumber(servers["keepalive"]),
-            try =  tonumber(servers["try"]),
-        }
-
-        config[skey] = {
-            cluster = { cls },
-        }
 
         -- fit config.lua format
         for k, v in pairs(servers) do
