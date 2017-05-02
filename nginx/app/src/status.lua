@@ -3,6 +3,7 @@
 local cjson     = require "cjson.safe"
 local checkups  = require "resty.checkups.api"
 local mload     = require "modules.load"
+local upstream 	= require "modules.upstream"
 
 local get_method    = ngx.req.get_method
 local read_body     = ngx.req.read_body
@@ -12,37 +13,6 @@ local ngx_match     = ngx.re.match
 local slardar = slardar
 
 local result = {}
-
-
-local function update_upstream(skey)
-    read_body()
-    local body = get_body_data()
-    if not body then
-        return ngx.HTTP_BAD_REQUEST, "body to big"
-    end
-
-    body = cjson.decode(body)
-    if not body then
-        return ngx.HTTP_BAD_REQUEST, "decode body error"
-    end
-
-    local ok, err = checkups.update_upstream(skey, {{ servers = body.servers}})
-    if not ok then
-        return ngx.HTTP_BAD_REQUEST, err
-    end
-
-    return ngx.HTTP_OK
-end
-
-
-local function delete_upstream(skey)
-    local ok, err = checkups.delete_upstream(skey)
-    if not ok then
-        return ngx.HTTP_BAD_REQUEST, err
-    end
-
-    return ngx.HTTP_OK
-end
 
 
 local request_uri = ngx.var.request_uri
@@ -60,9 +30,9 @@ else
         local status, err
         local method = get_method()
         if method == "PUT" or method == "POST" then
-            status, err = update_upstream(skey)
+            status, err = upstream.update_upstream(skey)
         elseif method == "DELETE" then
-            status, err = delete_upstream(skey)
+            status, err = upstream.delete_upstream(skey)
         else
             status, err =  ngx.HTTP_NOT_ALLOWED, "method not allowed"
         end
@@ -105,4 +75,4 @@ local content = cjson.encode(result) or ""
 ngx.header.content_type = "application/json"
 ngx.print(content)
 
-return ngx.exit(ngx.HTTP_OK)
+return ngx.exit(ngx.status)
