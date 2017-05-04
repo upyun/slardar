@@ -1,8 +1,9 @@
+ -- Copyright (C) 2015-2016, UPYUN Inc. 
 
-local cjson 	= require "cjson.safe"
+local cjson     = require "cjson.safe"
 local checkups  = require "resty.checkups.api"
 
-local read_body = ngx.req.read_body
+local read_body     = ngx.req.read_body
 local get_body_data = ngx.req.get_body_data
 
 
