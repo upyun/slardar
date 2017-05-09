@@ -1,19 +1,24 @@
 local cjson         = require "cjson.safe"
 
 local base          = require "resty.checkups.base"
+local subsystem     = require "resty.subsystem"
 
 local worker_id     = ngx.worker.id
 local worker_count  = ngx.worker.count
 local update_time   = ngx.update_time
-local mutex         = ngx.shared.mutex
-local state         = ngx.shared.state
-local shd_config    = ngx.shared.config
+
 local log           = ngx.log
 local ERR           = ngx.ERR
 local WARN          = ngx.WARN
 local INFO          = ngx.INFO
 
 local str_format    = string.format
+local type          = type
+
+
+local get_shm       = subsystem.get_shm
+local mutex         = get_shm("mutex")
+local shd_config    = get_shm("config")
 
 local _M = {
     _VERSION = "0.11",
@@ -81,12 +86,7 @@ local function shd_config_syncer(premature)
                 log(INFO, "get ", skey, " from shm: ", shd_servers)
                 if shd_servers then
                     shd_servers = cjson.decode(shd_servers)
-                    -- add new skey
-                    if not base.upstream.checkups[skey] then
-                        base.upstream.checkups[skey] = {}
-                    end
-
-                    base.upstream.checkups[skey].cluster = base.table_dup(shd_servers)
+                    base.upstream.checkups[skey] = base.table_dup(shd_servers)
                 elseif err then
                     success = false
                     log(WARN, "failed to get from shm: ", err)
@@ -139,6 +139,32 @@ function _M.check_update_server_args(skey, level, server)
 
     return true
 end
+
+
+function _M.do_get_upstream(skey)
+    local skeys = shd_config:get(base.SKEYS_KEY)
+    if not skeys then
+        return nil, "no skeys found from shm"
+    end
+
+    local key = _gen_shd_key(skey)
+    local shd_servers, err = shd_config:get(key)
+    if shd_servers then
+        shd_servers = cjson.decode(shd_servers)
+        if type(shd_servers) ~= "table" then
+            return nil
+        end
+
+        return shd_servers
+    elseif err then
+        log(WARN, "failed to get from shm: ", err)
+        return nil, err
+    else
+        log(WARN, "upstream " .. skey .. " not found")
+        return nil
+    end
+end
+
 
 
 function _M.do_update_upstream(skey, upstream)

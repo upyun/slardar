@@ -1,7 +1,5 @@
--- Copyright (C) 2015-2016, UPYUN Inc.
-
+-- Copyright (C) 2016 Libo Huang (huangnauh), UPYUN Inc.
 local cjson         = require "cjson.safe"
-local consul        = require "modules.consul"
 local setmetatable  = setmetatable
 local getfenv       = getfenv
 local setfenv       = setfenv
@@ -28,13 +26,14 @@ local load_dict     = ngx.shared.load
 
 local SKEYS_KEY     = "lua:skeys"
 local VERSION_KEY   = "lua:version"
+local LOAD_VERSION  = "load:version"
 local TIMER_DELAY   = 1
 local CODE_PREFIX   = "update:"
 local version_dict  = {}
 local global_version
 
 
-local _M = {_VERSION = 0.01}
+local _M = {_VERSION = '0.01'}
 
 
 local function pre_post(str, pattern)
@@ -43,8 +42,26 @@ local function pre_post(str, pattern)
         return str, nil
     end
     local prefix = str_sub(str, 1, from - 1)
-    local postfix = str_sub(str, to+1)
+    local postfix = str_sub(str, to + 1)
     return prefix, postfix
+end
+
+
+local function set_load_version(version)
+    local ok, err = load_dict:safe_set(LOAD_VERSION, version)
+    if not ok then
+        err = str_format('failed to set key: %s in load, err: %s', LOAD_VERSION, err)
+        log(ERR, err)
+        return nil, err
+    else
+        return true
+    end
+end
+
+
+function _M.get_load_version()
+    local load_version = load_dict:get(LOAD_VERSION)
+    return load_version
 end
 
 
@@ -149,7 +166,9 @@ function _M.create_load_syncer()
     local ok, err = timer_at(TIMER_DELAY, load_syncer)
     if not ok then
         log(ERR, "failed to create load_lua timer: ", err)
-        return
+        return nil, err
+    else
+        return true
     end
 end
 
@@ -196,42 +215,104 @@ local function module_loader(module_name)
 end
 
 
+local function pre_load(config)
+    if not config then
+        return true
+    end
+
+    if type(config) ~= "table" then
+        return nil, "load config invalid"
+    end
+
+    local load_init = config.load_init or {}
+    local config_module = load_init.module_name
+    if type(config_module) ~= "string" then
+        return nil, "load_init invalid"
+    end
+
+
+    local ok, module = pcall(require, config_module)
+    if not ok then
+        log(ERR, module)
+        return nil, str_format("module_name %s not find", config_module)
+    end
+
+    local mod = module:new(config)
+
+    local load_version, err
+    if type(mod.lversion) == "function" then
+        load_version, err = mod:lversion()
+        if not load_version then
+            return nil, err
+        end
+
+        if type(load_version) ~= "string" or #load_version < 1 then
+            return nil, "load_version invalid"
+        end
+    end
+
+    load_version = load_version or "0"
+    local ok, err = set_load_version(load_version)
+    if not ok then
+        return nil, err
+    end
+
+    local script_keys, err = mod:lkeys()
+    if err then
+        return nil, err
+    end
+
+    if not script_keys then
+        log(WARN, "no code to load")
+        return true
+    end
+
+    if type(script_keys) ~= "table" then
+        return nil, "script_keys invalid"
+    end
+
+    if not next(script_keys) then
+        log(WARN, "no code to load")
+        return true
+    end
+
+    local skeys = {}
+    for _, skey in ipairs(script_keys) do
+        local ok = pcall(require, skey)
+        if not ok then
+            local code = mod:lget(skey)
+            if not code then
+                return nil, "fail to get code from consul"
+            end
+            local ok, err = load_dict:safe_set(CODE_PREFIX .. skey, code)
+            if not ok then
+                return nil, err
+            end
+            skeys[skey] = { version = md5(code), time = localtime() }
+        end
+    end
+
+    if next(skeys) then
+        local ok, err = load_dict:safe_set(SKEYS_KEY, cjson.encode(skeys))
+        if not ok then
+            err = str_format('failed to set key: %s in load, err: %s', SKEYS_KEY, err)
+            log(ERR, err)
+            return nil, err
+        end
+    end
+
+    return true
+end
+
+
 function _M.init(config)
     tab_insert(package.loaders, 1, lua_loader)
     load_dict:flush_all()
-    local script_keys, consul_cluster, prefix
-    local consul_config = config.consul or {}
-    prefix = consul_config.config_key_prefix or ""
-    consul_cluster = consul_config.cluster or {}
-    script_keys = consul.get_script_blocking(consul_cluster, prefix .. "lua/?keys")
 
-    if script_keys then
-        local skeys = {}
-        for _, key in ipairs(script_keys) do
-            local skey = str_sub(key, #prefix + 5)
-            if skey ~= "" then
-                local ok = pcall(require, skey)
-                if not ok then
-                    local code
-                    code = consul.get_script_blocking(consul_cluster, key .. "?raw", true)
-                    if not code then
-                        return nil, "fail to get code from consul"
-                    end
-                    local ok, err = load_dict:safe_set(CODE_PREFIX .. skey, code)
-                    skeys[skey] = {version=md5(code), time=localtime() }
-                end
-            end
-        end
-        if next(skeys) then
-            local ok, err = load_dict:safe_set(SKEYS_KEY, cjson.encode(skeys))
-            if not ok then
-                err = str_format('failed to set key: %s in load, err: %s', SKEYS_KEY, err)
-                log(ERR, err)
-                return nil, err
-            end
-        end
-    else
-        log(WARN, "no code in consul")
+    -- try load code from somewhere
+    local ok, err = pre_load(config)
+    if not ok then
+        return nil, err
     end
 
     local ok, err = load_dict:safe_set(VERSION_KEY, 0)
@@ -310,10 +391,17 @@ function _M.uninstall_code(skey)
     return true
 end
 
-function _M.set_code(skey, body)
+function _M.set_code(skey, body, load_version)
     if not body then
         return nil, "need code to set"
     end
+
+    local load_version = load_version or "0"
+
+    if type(load_version) ~= "string" or load_version == "" or #load_version > 32 then
+        return nil, "load version invalid"
+    end
+
     local old_body = load_dict:get(CODE_PREFIX .. skey)
     if old_body then
         local old_md5 = md5(old_body)
@@ -326,6 +414,11 @@ function _M.set_code(skey, body)
     local ok, err = load_dict:safe_set(CODE_PREFIX .. skey, body)
     if not ok then
         return nil, str_format('failed to set key: %s in load, err: %s', skey, err)
+    end
+
+    local ok, err = set_load_version(load_version)
+    if not ok then
+        return nil, err
     end
 
     log(INFO, skey, " new code setted")
@@ -386,25 +479,26 @@ function _M.get_version(skey)
 
     if not skey then
         local ver = load_dict:get(VERSION_KEY)
-        local data = {version=ver, modules={}}
+        local load_ver = load_dict:get(LOAD_VERSION)
+        local data = {global_version=ver, commit_version=load_ver, modules={}}
         for key, value in pairs(skeys) do
-            tab_insert(data.modules, {version=value.version, time=value.time,name=key})
+            tab_insert(data.modules, {version=value.version, time=value.time, name=key})
         end
         return data
     else
         local mod_name = skey
         local sh_value = skeys[skey]
         if sh_value then
-            return {version=sh_value.version, time=sh_value.time, name=mod_name}
+            return {version=sh_value.version, time=sh_value.time, name=mod_name }
         else
             return {}
         end
     end
-
 end
 
 
-function _M.load_script(script_name, env)
+function _M.load_script(script_name, opts)
+    local opts = opts or {}
     local ok, mode = pcall(require, script_name)
     if not ok then
         log(ERR, mode)
@@ -412,8 +506,11 @@ function _M.load_script(script_name, env)
     end
 
     if mode and type(mode) == "function" then
-        local E=setmetatable(env,{__index=getfenv()})
-        setfenv(mode, E)
+        local env = opts.env or {}
+        if opts.global then
+            env = setmetatable(env, { __index = getfenv(0) })
+        end
+        setfenv(mode, env)
         return mode
     end
     return nil

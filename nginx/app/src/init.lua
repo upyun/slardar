@@ -1,8 +1,8 @@
 -- Copyright (C) 2015-2016, UPYUN Inc.
 
 local cjson  = require "cjson.safe"
-local consul = require "modules.consul"
-local mload  = require "modules.load"
+local consul = require "resty.consul.config"
+local mload  = require "resty.load"
 
 slardar = require "config" -- global config variable
 

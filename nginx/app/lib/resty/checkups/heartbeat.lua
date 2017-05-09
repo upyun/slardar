@@ -3,6 +3,7 @@
 local cjson         = require "cjson.safe"
 
 local base          = require "resty.checkups.base"
+local subsystem     = require "resty.subsystem"
 
 local str_sub       = string.sub
 local lower         = string.lower
@@ -19,9 +20,10 @@ local WARN          = ngx.WARN
 local now           = ngx.now
 local tcp           = ngx.socket.tcp
 local update_time   = ngx.update_time
-local mutex         = ngx.shared.mutex
-local state         = ngx.shared.state
 
+local get_shm       = subsystem.get_shm
+local mutex         = get_shm("mutex")
+local state         = get_shm("state")
 
 local _M = {
     _VERSION = "0.11",
@@ -310,7 +312,7 @@ local heartbeat = {
                 return _M.STATUS_ERR, err
             end
 
-            local status = tonumber(str_sub(status_line, from, to))
+            local status = str_sub(status_line, from, to)
             if statuses[status] == false then
                 return _M.STATUS_ERR, "bad status code"
             end
@@ -338,7 +340,7 @@ local function cluster_heartbeat(skey)
         ups_protected = false
     end
 
-    ups.timeout = ups.timeout or 60
+    ups.timeout = ups.timeout or 5
 
     local server_count = 0
     for level, cls in pairs(ups.cluster) do

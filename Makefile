@@ -52,6 +52,8 @@ configure: deps luajit
 		--with-pcre=$(ROOTDIR)/deps/pcre-$(V_PCRE) \
 		--with-ld-opt="-Wl,-rpath,$(LUAJIT_LIB),-rpath,$(INSTALL_LIBDIR)" \
 		--with-http_stub_status_module \
+		--with-stream \
+		--add-module=$(ROOTDIR)/deps/stream-lua-nginx-module-$(V_STREAM_LUA_NGX_MODULE) \
 		--add-module=$(ROOTDIR)/deps/lua-nginx-module-$(V_NGX_LUA_MODULE) \
 		--prefix=$(PREFIX)/nginx
 	@echo "==== Successfully configure Nginx $(V_NGINX) ===="
@@ -59,27 +61,35 @@ configure: deps luajit
 INSTALL_SRCDIR=$(PREFIX)/nginx/app/src/
 INSTALL_ETCDIR=$(PREFIX)/nginx/app/etc/
 INSTALL_DIRS=$(INSTALL_SRCDIR)/modules \
+			 $(INSTALL_SRCDIR)/stream \
 			 $(INSTALL_SRCDIR)/script \
 			 $(INSTALL_LIBDIR)/ngx \
 			 $(INSTALL_LIBDIR)/resty \
 			 $(INSTALL_LIBDIR)/resty/core \
 			 $(INSTALL_LIBDIR)/resty/checkups \
+			 $(INSTALL_LIBDIR)/resty/consul \
+			 $(INSTALL_LIBDIR)/resty/logger \
 			 $(INSTALL_ETCDIR)
 
 install: install-cjson install-cmsgpack
 	$(MKDIR) $(INSTALL_DIRS) $(PREFIX)/nginx/conf/slardar
+	$(MKDIR) $(INSTALL_DIRS) $(PREFIX)/nginx/conf/stream
 	@echo "==== Installing Slardar $(V_SLARDAR) to $(PREFIX) ===="
 	cd $(NGINX_DIR) && $(MAKE) install
 ifndef DEV
 	$(INSTALL_F) nginx/app/lib/resty/*.lua $(INSTALL_LIBDIR)/resty
 	$(INSTALL_F) nginx/app/lib/ngx/*.lua $(INSTALL_LIBDIR)/ngx
 	$(INSTALL_F) nginx/app/lib/resty/core/*.lua $(INSTALL_LIBDIR)/resty/core
+	$(INSTALL_F) nginx/app/lib/resty/logger/*.lua $(INSTALL_LIBDIR)/resty/logger
+	$(INSTALL_F) nginx/app/lib/resty/consul/*.lua $(INSTALL_LIBDIR)/resty/consul
 	$(INSTALL_F) nginx/app/lib/resty/checkups/*.lua $(INSTALL_LIBDIR)/resty/checkups
 	$(INSTALL_F) nginx/app/src/*.lua $(INSTALL_SRCDIR)
 	$(INSTALL_F) nginx/app/etc/*.lua $(INSTALL_ETCDIR)
 	$(INSTALL_F) nginx/app/src/modules/*.lua $(INSTALL_SRCDIR)/modules
+	$(INSTALL_F) nginx/app/src/stream/*.lua $(INSTALL_SRCDIR)/stream
 	$(INSTALL_F) nginx/conf/*.conf $(PREFIX)/nginx/conf
 	$(INSTALL_F) nginx/conf/slardar/*.conf $(PREFIX)/nginx/conf/slardar
+	$(INSTALL_F) nginx/conf/stream/*.conf $(PREFIX)/nginx/conf/stream
 endif
 	@echo "==== Successfully installed Slardar $(V_SLARDAR) to $(PREFIX) ===="
 

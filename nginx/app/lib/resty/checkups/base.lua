@@ -3,6 +3,7 @@
 local cjson         = require "cjson.safe"
 
 local lock          = require "resty.lock"
+local subsystem     = require "resty.subsystem"
 
 local str_format    = string.format
 local str_sub       = string.sub
@@ -14,6 +15,10 @@ local tab_sort      = table.sort
 local tab_concat    = table.concat
 local tab_insert    = table.insert
 local unpack        = unpack
+local tostring      = tostring
+local ipairs        = ipairs
+local pairs         = pairs
+local type          = type
 
 local log           = ngx.log
 local ERR           = ngx.ERR
@@ -23,10 +28,11 @@ local localtime     = ngx.localtime
 local re_find       = ngx.re.find
 local re_match      = ngx.re.match
 local re_gmatch     = ngx.re.gmatch
-local mutex         = ngx.shared.mutex
-local state         = ngx.shared.state
-local shd_config    = ngx.shared.config
 local now           = ngx.now
+
+local get_shm       = subsystem.get_shm
+local get_shm_key   = subsystem.get_shm_key
+local state         = get_shm("state")
 
 
 local _M = {
@@ -65,6 +71,7 @@ _M.cluster_status = cluster_status
 _M.is_tab = function(t) return type(t) == "table" end
 _M.is_str = function(t) return type(t) == "string" end
 _M.is_num = function(t) return type(t) == "number" end
+_M.is_nul = function(t) return t == nil or t == ngx.null end
 
 
 local function _gen_key(skey, srv)
@@ -159,7 +166,7 @@ function _M.check_res(res, check_opts)
 
         if typ == "http" and type(res) == "table"
         and res.status then
-            local status = tonumber(res.status)
+            local status = tostring(res.status)
             local http_opts = check_opts.http_opts
             if http_opts and http_opts.statuses and
                 http_opts.statuses[status] == false then
@@ -193,7 +200,7 @@ end
 
 
 function _M.get_lock(key, timeout)
-    local lock = lock:new("locks", {timeout=timeout})
+    local lock = lock:new(get_shm_key("locks"), {timeout=timeout})
     local elapsed, err = lock:lock(key)
     if not elapsed then
         log(WARN, "failed to acquire the lock: ", key, ", ", err)
@@ -214,8 +221,8 @@ end
 
 function _M.get_peer_status(skey, srv)
     local peer_key = PEER_STATUS_PREFIX .. _gen_key(skey, srv)
-    local peer_status = cjson.decode(state:get(peer_key))
-    return peer_status
+    local peer_status = state:get(peer_key)
+    return not _M.is_nul(peer_status) and cjson.decode(peer_status) or nil
 end
 
 
@@ -232,10 +239,8 @@ function _M.get_upstream_status(skey)
         ups_status[level] = {}
         if servers and type(servers) == "table" and #servers > 0 then
             for _, srv in ipairs(servers) do
-                local peer_key = _gen_key(skey, srv)
-                local peer_status = cjson.decode(state:get(PEER_STATUS_PREFIX ..
-                                                           peer_key)) or {}
-                peer_status.server = peer_key
+                local peer_status = _M.get_peer_status(skey, srv) or {}
+                peer_status.server = _gen_key(skey, srv)
                 peer_status["weight"] = srv.weight
                 peer_status["max_fails"] = srv.max_fails
                 peer_status["fail_timeout"] = srv.fail_timeout
