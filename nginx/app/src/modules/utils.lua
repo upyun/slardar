@@ -2,6 +2,7 @@ local str_sub     = string.sub
 local str_gsub    = string.gsub
 local str_find    = string.find
 local str_match   = string.match
+local str_gmatch  = string.gmatch
 local str_byte    = string.byte
 local str_reverse = string.reverse
 local tab_insert  = table.insert
@@ -11,25 +12,16 @@ local tab_sort    = table.sort
 local _M = {}
 
 
-function _M.str_split(str, split_char)
-    local sub_str_tab = {}
-    local i, j = 0, 0
-    local ss
-    while true do
-        j = str_find(str, split_char, i + 1, true)
-        if not j then
-            j = #str + 1
-        end
-        ss = str_sub(str, i + 1, j - 1)
-        if #ss > 0 then
-            tab_insert(sub_str_tab, ss)
-        end
-        if j >= #str then
-            break
-        end
-        i = j
+function _M.str_split(str, sep)
+    if not sep then
+        sep = "%s"
     end
-    return sub_str_tab
+    local res = {}, i = 1
+    for ss in str_gmatch(str, "([^" .. sep .. "]+)") do
+        res[i] = ss
+        i = i + 1
+    end
+    return res
 end
 
 
