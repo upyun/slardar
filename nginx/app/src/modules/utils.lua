@@ -16,7 +16,8 @@ function _M.str_split(str, sep)
     if not sep then
         sep = "%s"
     end
-    local res = {}, i = 1
+    local res = {}
+    local i = 1
     for ss in str_gmatch(str, "([^" .. sep .. "]+)") do
         res[i] = ss
         i = i + 1
