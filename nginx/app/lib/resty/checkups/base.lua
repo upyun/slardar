@@ -7,12 +7,8 @@ local subsystem     = require "resty.subsystem"
 
 local str_format    = string.format
 local str_sub       = string.sub
-local lower         = string.lower
-local byte          = string.byte
-local floor         = math.floor
-local sqrt          = math.sqrt
-local tab_sort      = table.sort
-local tab_concat    = table.concat
+local str_find      = string.find
+local str_match     = string.match
 local tab_insert    = table.insert
 local unpack        = unpack
 local tostring      = tostring
@@ -23,11 +19,6 @@ local type          = type
 local log           = ngx.log
 local ERR           = ngx.ERR
 local WARN          = ngx.WARN
-local tcp           = ngx.socket.tcp
-local localtime     = ngx.localtime
-local re_find       = ngx.re.find
-local re_match      = ngx.re.match
-local re_gmatch     = ngx.re.gmatch
 local now           = ngx.now
 
 local get_shm       = subsystem.get_shm
@@ -81,13 +72,21 @@ _M._gen_key = _gen_key
 
 
 local function extract_srv_host_port(name)
-    local m = re_match(name, [[([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)(?::([0-9]+))?]], "jo")
-    if not m then
-        return
+    local from, to = str_find(name, ":")
+    if from then
+        local host = str_sub(name, 1, from - 1)
+        local port = str_sub(name, to + 1)
+        host = str_match(host, "^%d+%.%d+%.%d+%.%d+$")
+        port = str_match(port, "^%d+$")
+        if host and port then
+            return host, port
+        end
+    else
+        local host = str_match(name, "^%d+%.%d+%.%d+%.%d+$")
+        if host then
+            return host, 80
+        end
     end
-
-    local host, port = m[1], m[2] or 80
-    return host, port
 end
 
 

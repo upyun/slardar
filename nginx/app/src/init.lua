@@ -1,8 +1,9 @@
 -- Copyright (C) 2015-2016, UPYUN Inc.
 
-local cjson  = require "cjson.safe"
-local consul = require "resty.consul.config"
-local mload  = require "resty.load"
+local cjson    = require "cjson.safe"
+local consul   = require "resty.consul.config"
+local mload    = require "resty.load"
+local checkups = require "resty.checkups.api"
 
 slardar = require "config" -- global config variable
 
@@ -61,6 +62,13 @@ if no_consul ~= true then
     elseif not init_ok then
         error("Init lua script failed, aborting !!!!")
     end
+end
+
+local ok, init_ok = pcall(checkups.init, slardar)
+if not ok then
+    error("Init checkups failed, " .. init_ok .. ", aborting !!!!")
+elseif not init_ok then
+    error("Init checkups failed, aborting !!!!")
 end
 
 setmetatable(slardar, {

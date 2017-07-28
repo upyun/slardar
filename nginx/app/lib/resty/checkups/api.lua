@@ -71,6 +71,41 @@ function _M.ready_ok(skey, callback, opts)
 end
 
 
+function _M.init(config)
+    if not config.global.checkup_shd_sync_enable then
+        return true
+    end
+
+    local skeys = {}
+    for skey, ups in pairs(config) do
+        if type(ups) == "table" and type(ups.cluster) == "table" then
+            for level, cls in pairs(ups.cluster) do
+                base.extract_servers_from_upstream(skey, cls)
+            end
+
+            local key = dyconfig._gen_shd_key(skey)
+            local ok, err = shd_config:set(key, cjson.encode(base.table_dup(ups)))
+            if not ok then
+                return nil, err
+            end
+        end
+        skeys[skey] = 1
+    end
+
+    local ok, err = shd_config:set(base.SHD_CONFIG_VERSION_KEY, 0)
+    if not ok then
+        return nil, err
+    end
+
+    local ok, err = shd_config:set(base.SKEYS_KEY, cjson.encode(skeys))
+    if not ok then
+        return nil, err
+    end
+
+    return true
+end
+
+
 function _M.prepare_checker(config)
     base.upstream.start_time = localtime()
     base.upstream.conf_hash = config.global.conf_hash
@@ -84,7 +119,6 @@ function _M.prepare_checker(config)
         or base.upstream.checkup_timer_interval
     base.upstream.default_heartbeat_enable = config.global.default_heartbeat_enable
 
-    local skeys = {}
     for skey, ups in pairs(config) do
         if type(ups) == "table" and type(ups.cluster) == "table" then
             base.upstream.checkups[skey] = base.table_dup(ups)
@@ -92,33 +126,10 @@ function _M.prepare_checker(config)
             for level, cls in pairs(base.upstream.checkups[skey].cluster) do
                 base.extract_servers_from_upstream(skey, cls)
             end
-            if base.upstream.checkup_shd_sync_enable then
-                if shd_config and worker_id then
-                    local phase = get_phase()
-                    -- if in init_worker phase, only worker 0 can update shm
-                    if phase == "init" or
-                        phase == "init_worker" and worker_id() == 0 then
-                        local key = dyconfig._gen_shd_key(skey)
-                        shd_config:set(key, cjson.encode(base.upstream.checkups[skey]))
-                    end
-                    skeys[skey] = 1
-                else
-                    log(ERR, "checkup_shd_sync_enable is true but " ..
-                        "no shd_config nor worker_id found.")
-                end
-            end
         end
     end
 
-    if base.upstream.checkup_shd_sync_enable and
-        shd_config and worker_id then
-        local phase = get_phase()
-        -- if in init_worker phase, only worker 0 can update shm
-        if phase == "init" or phase == "init_worker" and worker_id() == 0 then
-            shd_config:set(base.SHD_CONFIG_VERSION_KEY, 0)
-            shd_config:set(base.SKEYS_KEY, cjson.encode(skeys))
-        end
-
+    if base.upstream.checkup_shd_sync_enable then
         base.upstream.shd_config_version = 0
     end
 
