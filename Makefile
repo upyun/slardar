@@ -37,6 +37,7 @@ RMDIR= rmdir 2>/dev/null
 INSTALL_F= install -m 0644
 UNINSTALL= $(RM)
 
+WITH_SSL_MODULE= --with-http_ssl_module --with-openssl=$(ROOTDIR)/deps/openssl-OpenSSL_$(V_OPENSSL)
 ##############################################################################
 
 NGINX_DIR= deps/nginx-$(V_NGINX)
@@ -48,7 +49,7 @@ default all: cjson cmsgpack luasocket
 INSTALL_LIBDIR=$(PREFIX)/nginx/app/lib/
 configure: deps luajit
 	@echo "==== Configuring Nginx $(V_NGINX) ===="
-	cd $(NGINX_DIR) && ./configure \
+	cd $(NGINX_DIR) && ./configure $(WITH_SSL_MODULE) \
 		--with-pcre=$(ROOTDIR)/deps/pcre-$(V_PCRE) \
 		--with-ld-opt="-Wl,-rpath,$(LUAJIT_LIB),-rpath,$(INSTALL_LIBDIR)" \
 		--with-http_stub_status_module \
