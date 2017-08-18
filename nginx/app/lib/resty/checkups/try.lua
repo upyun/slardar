@@ -71,6 +71,8 @@ local function prepare_callbacks(skey, opts)
             key = ngx.var.uri
         elseif mode == "ip_hash" then
             key = ngx.var.remote_addr
+        elseif mode == "header_hash" then
+            key = ngx.var.http_x_hash_key or ngx.var.uri
         end
 
         next_server_func = consistent_hash.next_consistent_hash_server
