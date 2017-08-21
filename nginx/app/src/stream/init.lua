@@ -1,5 +1,6 @@
 -- Copyright (C) 2017 Libo Huang (huangnauh), UPYUN Inc.
-local consul = require "resty.consul.config"
+local consul   = require "resty.consul.config"
+local checkups = require "resty.checkups.api"
 
 slardar = require "config" -- global config variable
 
@@ -15,4 +16,11 @@ if no_consul ~= true then
     elseif not init_ok then
         error("Init config failed, aborting !!!!")
     end
+end
+
+local ok, init_ok = pcall(checkups.init, slardar)
+if not ok then
+    error("Init checkups failed, " .. init_ok .. ", aborting !!!!")
+elseif not init_ok then
+    error("Init checkups failed, aborting !!!!")
 end
