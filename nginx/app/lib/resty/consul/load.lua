@@ -59,6 +59,10 @@ local function _lget(consul_cluster, prefix, key)
         return nil, err
     end
 
+    if v == nil then
+        return
+    end
+
     if type(v) ~= "string" then
         return nil, "expected to be a string but got " .. type(v)
     end

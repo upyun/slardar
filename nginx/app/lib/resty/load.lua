@@ -242,10 +242,11 @@ local function pre_load(config)
     local load_version, err
     if type(mod.lversion) == "function" then
         load_version, err = mod:lversion()
-        if not load_version then
+        if err then
             return nil, err
         end
 
+        load_version = load_version or "0"
         if type(load_version) ~= "string" or #load_version < 1 then
             return nil, "load_version invalid"
         end
