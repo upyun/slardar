@@ -14,6 +14,7 @@ local INFO          = ngx.INFO
 
 local str_format    = string.format
 local type          = type
+local pairs         = pairs
 
 
 local get_shm       = subsystem.get_shm
@@ -165,6 +166,25 @@ function _M.do_get_upstream(skey)
     end
 end
 
+
+function _M.do_get_upstreams()
+    local skeys = shd_config:get(base.SKEYS_KEY)
+    if not skeys then
+        return nil, "no skeys found from shm"
+    end
+    local upstreams = {}
+    skeys = cjson.decode(skeys)
+    for skey, _ in pairs(skeys) do
+        local shd_servers, err = shd_config:get(_gen_shd_key(skey))
+        log(INFO, "get ", skey, " from shm: ", shd_servers)
+        if shd_servers then
+            upstreams[skey] = cjson.decode(shd_servers)
+        elseif err then
+            log(WARN, "failed to get from shm: ", err)
+        end
+    end
+    return upstreams
+end
 
 
 function _M.do_update_upstream(skey, upstream)
