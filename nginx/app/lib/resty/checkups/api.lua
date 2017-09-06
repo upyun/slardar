@@ -268,6 +268,21 @@ local function gen_upstream(skey, upstream)
 end
 
 
+function _M.get_upstream(skey)
+    local ups, err
+    if skey then
+        ups, err = dyconfig.do_get_upstream(skey)
+    else
+        ups, err = dyconfig.do_get_upstreams()
+    end
+
+    if err then
+        return nil, err
+    end
+    return ups
+end
+
+
 function _M.update_upstream(skey, upstream)
     if not upstream or not next(upstream) then
         return false, "can not set empty upstream"

@@ -22,6 +22,8 @@ if request_uri == "/status" then
     if slardar.global.version ~= nil then
         result["slardar_version"] = slardar.global.version
     end
+elseif request_uri == "/upstreams" then
+    result = checkups.get_upstream()
 else
     local m = ngx_match(request_uri, "^/upstream/([-_a-zA-Z0-9\\.]+)$", "jo")
     if m then
