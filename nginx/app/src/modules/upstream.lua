@@ -22,7 +22,16 @@ function _M.update_upstream(skey)
         return ngx.HTTP_BAD_REQUEST, "decode body error"
     end
 
-    local ok, err = checkups.update_upstream(skey, {{ servers = body.servers}})
+    local upstream
+    if body.servers then
+        upstream = {{ servers = body.servers }}
+    elseif body.cluster then
+        upstream = body
+    else
+        return ngx.HTTP_BAD_REQUEST, "body invalid"
+    end
+
+    local ok, err = checkups.update_upstream(skey, upstream)
     if not ok then
         return ngx.HTTP_BAD_REQUEST, err
     end
