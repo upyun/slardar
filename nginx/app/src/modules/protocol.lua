@@ -57,12 +57,12 @@ local function get_status()
 end
 
 
-local function get_upstreams()
+local function get_info()
     return checkups.get_upstream()
 end
 
 
-local valid_info = { status=get_status, upstreams=get_upstreams }
+local valid_info = { status=get_status, info=get_info }
 
 
 function _M.new(self)
@@ -90,7 +90,8 @@ end
 function _M.GET_upstream(name, body)
     local func = valid_info[name]
     if type(func) ~= "function" then
-        return nil, "only allowed"
+        log(ERR, "failed to GET name: ", name)
+        return nil, "not allowed"
     end
 
     local result, err = func()
@@ -150,6 +151,11 @@ local function handle_command(self)
     if not valid_topic[topic] then
         return { code=PROTOCOL_ERROR, message="topic invalid" }
     end
+
+    if str_sub(name, -1) == "\r" then
+        name = str_sub(name, 0, -2)
+    end
+
     return { code=PROTOCOL_CONTINUE, command={method=method, topic=topic, name=name} }
 end
 
