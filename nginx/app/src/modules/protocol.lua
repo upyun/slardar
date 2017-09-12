@@ -47,6 +47,24 @@ local valid_method = { GET=true, PUT=true, DELETE=true }
 local valid_topic = { upstream=true }
 
 
+local function get_status()
+    local result = checkups.get_status()
+
+    if slardar.global.version ~= nil then
+        result["slardar_version"] = slardar.global.version
+    end
+    return result
+end
+
+
+local function get_upstreams()
+    return checkups.get_upstream()
+end
+
+
+local valid_info = { status=get_status, upstreams=get_upstreams }
+
+
 function _M.new(self)
     local sock, err = req_sock()
     if not sock then
@@ -70,14 +88,14 @@ end
 
 
 function _M.GET_upstream(name, body)
-    if name ~= "status" then
-        return nil, "only status allowed"
+    local func = valid_info[name]
+    if type(func) ~= "function" then
+        return nil, "only allowed"
     end
 
-    local result = checkups.get_status()
-
-    if slardar.global.version ~= nil then
-        result["slardar_version"] = slardar.global.version
+    local result, err = func()
+    if err then
+        return nil, err
     end
     return result
 end
