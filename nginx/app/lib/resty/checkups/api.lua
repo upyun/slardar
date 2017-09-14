@@ -247,13 +247,13 @@ local function gen_upstream(skey, upstream)
     -- check servers
     local ok
     for level, cls in pairs(ups.cluster) do
-        if not cls or not next(cls) then
+        if type(cls) ~= "table" or not next(cls) then
             return nil, "can not update empty level"
         end
 
         local servers = cls.servers
-        if not servers or not next(servers) then
-            return nil, "can not update empty servers"
+        if type(servers) ~= "table" or not next(servers) then
+            return nil, "servers invalid"
         end
 
         for _, srv in ipairs(servers) do
@@ -284,7 +284,7 @@ end
 
 
 function _M.update_upstream(skey, upstream)
-    if not upstream or not next(upstream) then
+    if type(upstream) ~= "table" or not next(upstream) then
         return false, "can not set empty upstream"
     end
 
