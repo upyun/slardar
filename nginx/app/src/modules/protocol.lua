@@ -2,7 +2,6 @@
 local bit           = require "bit"
 local cjson         = require "cjson.safe"
 local checkups      = require "resty.checkups.api"
-local consul        = require "resty.consul.config"
 local utils         = require "modules.utils"
 
 local type          = type
@@ -77,9 +76,13 @@ end
 
 
 function _M.PUT_upstream(name, body)
-    local upstream, err = consul.value2upstream(body)
-    if not upstream then
-        return false, err
+    local upstream
+    if body.servers then
+        upstream = {{ servers = body.servers }}
+    elseif body.cluster then
+        upstream = body
+    else
+        return false, "invalid body"
     end
 
     local ok, err = checkups.update_upstream(name, upstream)
