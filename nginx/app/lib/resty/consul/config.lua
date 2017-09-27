@@ -86,7 +86,7 @@ function _M.init(config)
     local opts = {decode=utils.parse_body, default={} }
     local upstreams_prefix = "upstreams"
     if ngx_subsystem ~= "http" then
-        upstreams_prefix = ngx_subsystem .. "_upstreams"
+        upstreams_prefix = "upstreams_" .. ngx_subsystem
     end
 
     local upstream_keys = api.get_kv_blocking(consul_cluster, key_prefix .. upstreams_prefix .. "?keys", opts)
