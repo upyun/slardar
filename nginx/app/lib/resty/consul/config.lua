@@ -55,29 +55,6 @@ local function load_config(config, key)
 end
 
 
-function _M.value2upstream(body)
-    if type(body) ~= "table" then
-        return nil, "body invalid"
-    end
-
-    local servers = body.servers
-    if type(servers) ~= "table" then
-        return nil, "servers invalid"
-    end
-    body.servers = nil
-
-    local upstream
-    if next(body) then
-        upstream = body
-        upstream.cluster = {{ servers = servers }}
-    else
-        upstream = {{ servers = servers }}
-    end
-
-    return upstream
-end
-
-
 -- get server in the init_by_lua* context for the lua-resty-checkups Lua Library
 function _M.init(config)
     local consul = config.consul or {}

@@ -2,7 +2,6 @@
 local bit           = require "bit"
 local cjson         = require "cjson.safe"
 local checkups      = require "resty.checkups.api"
-local consul        = require "resty.consul.config"
 local utils         = require "modules.utils"
 
 local type          = type
@@ -47,6 +46,24 @@ local valid_method = { GET=true, PUT=true, DELETE=true }
 local valid_topic = { upstream=true }
 
 
+local function get_status()
+    local result = checkups.get_status()
+
+    if slardar.global.version ~= nil then
+        result["slardar_version"] = slardar.global.version
+    end
+    return result
+end
+
+
+local function get_info()
+    return checkups.get_upstream()
+end
+
+
+local valid_info = { status=get_status, info=get_info }
+
+
 function _M.new(self)
     local sock, err = req_sock()
     if not sock then
@@ -59,9 +76,13 @@ end
 
 
 function _M.PUT_upstream(name, body)
-    local upstream, err = consul.value2upstream(body)
-    if not upstream then
-        return false, err
+    local upstream
+    if body.servers then
+        upstream = {{ servers = body.servers }}
+    elseif body.cluster then
+        upstream = body
+    else
+        return false, "invalid body"
     end
 
     local ok, err = checkups.update_upstream(name, upstream)
@@ -70,14 +91,15 @@ end
 
 
 function _M.GET_upstream(name, body)
-    if name ~= "status" then
-        return nil, "only status allowed"
+    local func = valid_info[name]
+    if type(func) ~= "function" then
+        log(ERR, "failed to GET name: ", name)
+        return nil, "not allowed"
     end
 
-    local result = checkups.get_status()
-
-    if slardar.global.version ~= nil then
-        result["slardar_version"] = slardar.global.version
+    local result, err = func()
+    if err then
+        return nil, err
     end
     return result
 end
@@ -132,6 +154,11 @@ local function handle_command(self)
     if not valid_topic[topic] then
         return { code=PROTOCOL_ERROR, message="topic invalid" }
     end
+
+    if str_sub(name, -1) == "\r" then
+        name = str_sub(name, 0, -2)
+    end
+
     return { code=PROTOCOL_CONTINUE, command={method=method, topic=topic, name=name} }
 end
 
