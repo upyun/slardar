@@ -240,8 +240,8 @@ local function pre_load(config)
     local mod = module:new(config)
 
     local load_version, err
-    if type(mod.lversion) == "function" then
-        load_version, err = mod:lversion()
+    if type(mod.version) == "function" then
+        load_version, err = mod:version()
         if err then
             return nil, err
         end
@@ -258,32 +258,22 @@ local function pre_load(config)
         return nil, err
     end
 
-    local script_keys, err = mod:lkeys()
+    local list, err = mod:list()
     if err then
         return nil, err
     end
 
-    if not script_keys then
-        log(WARN, "no code to load")
-        return true
-    end
-
-    if type(script_keys) ~= "table" then
-        return nil, "script_keys invalid"
-    end
-
-    if not next(script_keys) then
+    if not next(list) then
         log(WARN, "no code to load")
         return true
     end
 
     local skeys = {}
-    for _, skey in ipairs(script_keys) do
+    for skey, code in ipairs(list) do
         local ok = pcall(require, skey)
         if not ok then
-            local code = mod:lget(skey)
             if not code then
-                return nil, "fail to get code from consul"
+                return nil, "fail to get code from key-value store"
             end
             local ok, err = load_dict:safe_set(CODE_PREFIX .. skey, code)
             if not ok then

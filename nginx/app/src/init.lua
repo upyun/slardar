@@ -1,7 +1,7 @@
 -- Copyright (C) 2015-2016, UPYUN Inc.
 
 local cjson    = require "cjson.safe"
-local consul   = require "resty.consul.config"
+local store    = require "resty.store.config"
 local mload    = require "resty.load"
 local checkups = require "resty.checkups.api"
 
@@ -43,11 +43,11 @@ slardar.exit = function(err)
 end
 
 
-local no_consul = slardar.global.no_consul
+local no_store = slardar.global.no_store
 
 -- if init config failed, abort -t or reload.
-local ok, init_ok = pcall(consul.init, slardar)
-if no_consul ~= true then
+local ok, init_ok = pcall(store.init, slardar)
+if no_store ~= true then
     if not ok then
         error("Init config failed, " .. init_ok .. ", aborting !!!!")
     elseif not init_ok then
@@ -56,7 +56,7 @@ if no_consul ~= true then
 end
 
 local ok, init_ok = pcall(mload.init, slardar)
-if no_consul ~= true then
+if no_store ~= true then
     if not ok then
         error("Init lua script failed, " .. init_ok .. ", aborting !!!!")
     elseif not init_ok then
@@ -72,5 +72,5 @@ elseif not init_ok then
 end
 
 setmetatable(slardar, {
-    __index = consul.load_config,
+    __index = store.load_config,
 })
