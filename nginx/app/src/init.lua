@@ -70,7 +70,3 @@ if not ok then
 elseif not init_ok then
     error("Init checkups failed, aborting !!!!")
 end
-
-setmetatable(slardar, {
-    __index = store.load_config,
-})

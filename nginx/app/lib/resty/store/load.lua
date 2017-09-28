@@ -28,7 +28,7 @@ end
 function _M.list(self)
     local opts = { type=self.store_type, block=true, cluster=self.store_cluster,
         operation="list", default={} }
-    local list, err = api.get(str_format("%s/lua", self.prefix), opts)
+    local list, err = api.get(str_format("%slua", self.prefix), opts)
     if err then
         return nil, err
     end
@@ -40,7 +40,7 @@ end
 
 local function _get(store_cluster, store_type, prefix, key)
     local opts = { type=store_type, block=true, cluster=store_cluster }
-    local v, err = api.get(str_format("%s/lua/%s", prefix, key), opts)
+    local v, err = api.get(str_format("%slua/%s", prefix, key), opts)
     if err then
         return nil, err
     end

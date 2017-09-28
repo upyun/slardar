@@ -40,8 +40,8 @@ _M.store = {
     enable = false,
 
     -- key-value store prefix.
-    -- Slardar will read upstream list from {config_key_prefix}/upstreams/.
-    config_key_prefix = "config/slardar",
+    -- Slardar will read upstream list from {config_key_prefix}upstreams/.
+    config_key_prefix = "config/slardar/",
 
     -- positive cache ttl(in seconds) for dynamic configurations from key-value store.
     config_positive_ttl = 10,

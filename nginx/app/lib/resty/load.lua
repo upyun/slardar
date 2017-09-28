@@ -253,6 +253,7 @@ local function pre_load(config)
     end
 
     load_version = load_version or "0"
+    log(INFO, "load_version:", load_version)
     local ok, err = set_load_version(load_version)
     if not ok then
         return nil, err
@@ -269,7 +270,8 @@ local function pre_load(config)
     end
 
     local skeys = {}
-    for skey, code in ipairs(list) do
+    for skey, code in pairs(list) do
+        log(INFO, "load script:", skey)
         local ok = pcall(require, skey)
         if not ok then
             if not code then

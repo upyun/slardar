@@ -5,13 +5,10 @@ local utils        = require "resty.store.utils"
 local api          = require "resty.store.api"
 local subsystem    = require "resty.subsystem"
 
-local ipairs       = ipairs
 local pairs        = pairs
 local next         = next
 local type         = type
-local tonumber     = tonumber
 local setmetatable = setmetatable
-local str_sub      = string.sub
 local ngx_subsystem= ngx.config.subsystem
 
 local get_shm_key  = subsystem.get_shm_key
@@ -35,7 +32,7 @@ local function load_config(config, key)
         return value
     end
 
-    if store.config_cache_enable == false then
+    if store_config.config_cache_enable == false then
         return _load_config()
     end
 
@@ -45,8 +42,8 @@ local function load_config(config, key)
           encode = cmsgpack.pack,
           decode = cmsgpack.unpack,
         },
-        { positive_ttl = cache_label.config_positive_ttl or 30,
-          negative_ttl = cache_label.config_negative_ttl or 3,
+        { positive_ttl = store_config.config_positive_ttl or 30,
+          negative_ttl = store_config.config_negative_ttl or 3,
           name = cache_label,
           lock_shdict = get_shm_key("locks"),
         }

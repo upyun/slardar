@@ -13,6 +13,7 @@ local tab_insert    = table.insert
 local decode_base64 = ngx.decode_base64
 local log           = ngx.log
 local ERR           = ngx.ERR
+local INFO          = ngx.INFO
 
 local _M = {}
 
@@ -110,8 +111,8 @@ local valid_store = {
                         if type(value) ~= "string" then
                             return nil, "Value invalid"
                         end
-                        local str = decode_base64(value)
-                        if str == nil then
+                        value = decode_base64(value)
+                        if value == nil then
                             return nil, "value not well formed"
                         end
                         res[key] = value
@@ -133,6 +134,7 @@ local function get_store_blocking(path, opts)
     for _, cls in pairs(cluster) do
         for _, srv in pairs(cls.servers) do
             local url = str_format("http://%s:%s%s", srv.host, srv.port, path)
+            log(INFO, "get url: ", url)
             local resp, code = http.request(url)
             if code == 404 then
                 return opts.default
@@ -164,8 +166,10 @@ local function get_store(path, opts)
     local hp, err = httpipe:new()
     if not hp then
         log(ERR, "failed to new httpipe: ", err)
-        return nil, "new "
+        return nil, "new http failed"
     end
+
+    log(INFO, "get path: ", path)
 
     hp:set_timeout(5 * 1000)
     local req = {
@@ -190,11 +194,6 @@ local function get_store(path, opts)
         ngx.log(ngx.ERR, "failed to get config from store: ", res.status)
         hp:close()
         return nil, "get store failed"
-    end
-
-    local ok, err = hp:set_keepalive()
-    if not ok then
-        ngx.log(ngx.ERR, "set_keepalive failed, err:", err)
     end
 
     local body, err = opts.extract(res.body)
@@ -226,7 +225,7 @@ function _M.get(key, opts)
         log(ERR, "invalid store operation ", operation)
         return nil, "invalid store operation"
     end
-    local uri = str_format("/%s%s%s", store.api_prefix, key, operation_store.postfix)
+    local uri = str_format("%s%s%s", store.api_prefix, key, operation_store.postfix)
     opts.extract = operation_store.extract
     if opts.block then
         return get_store_blocking(uri, opts)
