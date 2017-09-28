@@ -16,6 +16,7 @@ local _M = {
     HTTP_SERVICE_UNAVAILABLE = {503, "service unavailable"},
 
     EXIT_TRY_CODE       = {40099999, "exit try code"},
+    UNKNOWN_ERR         = {50300000, "unknown error"},
 }
 
 

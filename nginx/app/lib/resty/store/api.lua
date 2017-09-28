@@ -138,7 +138,7 @@ local function get_store_blocking(path, opts)
             local resp, code = http.request(url)
             if code == 404 then
                 return opts.default
-            elseif code < 300 and resp then
+            elseif code == 200 and resp then
                 local body, err = opts.extract(resp)
                 if err then
                     log(ERR, "extract body failed:", err)
@@ -190,7 +190,7 @@ local function get_store(path, opts)
 
     if res.status == 404 then
         return opts.default
-    elseif res.status >= 300 then
+    elseif res.status ~= 200 then
         ngx.log(ngx.ERR, "failed to get config from store: ", res.status)
         hp:close()
         return nil, "get store failed"
