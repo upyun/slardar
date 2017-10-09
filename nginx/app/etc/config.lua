@@ -21,39 +21,42 @@ _M.global = {
     -- sync upstream list from shared memory every 1s
     shd_config_timer_interval = 1,
 
-    -- If no_consul is set to true, Slardar will continue start or reload
-    -- even if getting data from consul failed.
+    -- If no_store is set to true, Slardar will continue start or reload
+    -- even if getting data from key-value store failed.
     -- Remember to set this value to false when you need to read persisted
-    -- upstreams or lua codes from consul.
-    no_consul = true,
+    -- upstreams or lua codes from key-value store.
+    no_store = true,
 }
 
 
-_M.consul = {
-    -- connect to consul will timeout in 5s.
+_M.store = {
+    -- key-value store type
+    type = "etcd",
+
+    -- connect to key-value store will timeout in 5s.
     timeout = 5,
 
-    -- disable checkups heartbeat to consul.
+    -- disable checkups heartbeat to key-value store.
     enable = false,
 
-    -- consul k/v prefix.
-    -- Slardar will read upstream list from config/slardar/upstreams.
+    -- key-value store prefix.
+    -- Slardar will read upstream list from {config_key_prefix}upstreams/.
     config_key_prefix = "config/slardar/",
 
-    -- positive cache ttl(in seconds) for dynamic configurations from consul.
+    -- positive cache ttl(in seconds) for dynamic configurations from key-value store.
     config_positive_ttl = 10,
 
-    -- negative cache ttl(in seconds) for dynamic configurations from consul.
+    -- negative cache ttl(in seconds) for dynamic configurations from key-value store.
     config_negative_ttl = 5,
 
-    -- enable or disable dynamic configurations cache from consul.
+    -- enable or disable dynamic configurations cache from key-value store.
     config_cache_enable = true,
 
     cluster = {
         {
             servers = {
-                -- change these to your own consul http addresses
-                { host = "127.0.0.1", port = 8500 },
+                -- change these to your own key-value store http addresses
+                { host = "127.0.0.1", port = 2379 },
             },
         },
     },
@@ -61,7 +64,7 @@ _M.consul = {
 
 _M.load_init = {
     -- load_init module name for lua-resty-load
-    module_name = "resty.consul.load"
+    module_name = "resty.store.load"
 }
 
 

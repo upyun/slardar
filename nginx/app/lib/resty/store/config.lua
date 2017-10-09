@@ -1,16 +1,14 @@
 -- Copyright (C) 2016 Libo Huang (huangnauh), UPYUN Inc.
 local cmsgpack     = require "cmsgpack"
 local shcache      = require "resty.shcache"
-local utils        = require "resty.consul.utils"
-local api          = require "resty.consul.api"
+local utils        = require "resty.store.utils"
+local api          = require "resty.store.api"
 local subsystem    = require "resty.subsystem"
 
-local ipairs       = ipairs
 local pairs        = pairs
 local next         = next
-local tonumber     = tonumber
+local type         = type
 local setmetatable = setmetatable
-local str_sub      = string.sub
 local ngx_subsystem= ngx.config.subsystem
 
 local get_shm_key  = subsystem.get_shm_key
@@ -18,21 +16,23 @@ local get_shm_key  = subsystem.get_shm_key
 local _M = {}
 
 
--- get dynamic config from consul
+-- get dynamic config from key-value store
 local function load_config(config, key)
-    local consul = config.consul or {}
-    local cache_label = "consul_config"
+    local store_config = config.store or {}
+    local cache_label = "store_config"
 
     local _load_config = function()
-        local key_prefix = consul.config_key_prefix or ""
-        local key = key_prefix .. key .. "?raw"
+        local key_prefix = store_config.config_key_prefix or ""
+        local key = key_prefix .. key
 
-        ngx.log(ngx.INFO, "get config from consul, key: " .. key)
+        ngx.log(ngx.INFO, "get config from key-value store, key: " .. key)
 
-        return  api.get_kv(key, {decode=utils.parse_body})
+        local opts = { type=store_config.type, operation="key", decode=utils.parse_body }
+        local value, err = api.get(key, opts)
+        return value
     end
 
-    if consul.config_cache_enable == false then
+    if store_config.config_cache_enable == false then
         return _load_config()
     end
 
@@ -42,8 +42,8 @@ local function load_config(config, key)
           encode = cmsgpack.pack,
           decode = cmsgpack.unpack,
         },
-        { positive_ttl = consul.config_positive_ttl or 30,
-          negative_ttl = consul.config_negative_ttl or 3,
+        { positive_ttl = store_config.config_positive_ttl or 30,
+          negative_ttl = store_config.config_negative_ttl or 3,
           name = cache_label,
           lock_shdict = get_shm_key("locks"),
         }
@@ -55,57 +55,29 @@ local function load_config(config, key)
 end
 
 
-function _M.value2upstream(body)
-    if type(body) ~= "table" then
-        return nil, "body invalid"
-    end
-
-    local servers = body.servers
-    if type(servers) ~= "table" then
-        return nil, "servers invalid"
-    end
-    body.servers = nil
-
-    local upstream
-    if next(body) then
-        upstream = body
-        upstream.cluster = {{ servers = servers }}
-    else
-        upstream = {{ servers = servers }}
-    end
-
-    return upstream
-end
-
-
 -- get server in the init_by_lua* context for the lua-resty-checkups Lua Library
 function _M.init(config)
-    local consul = config.consul or {}
-    local key_prefix = consul.config_key_prefix or ""
-    local consul_cluster = consul.cluster or {}
-    local opts = {decode=utils.parse_body, default={} }
+    local store_config = config.store or {}
+    local key_prefix = store_config.config_key_prefix or ""
+    local store_cluster = store_config.cluster or {}
     local upstreams_prefix = "upstreams"
     if ngx_subsystem ~= "http" then
         upstreams_prefix = "upstreams_" .. ngx_subsystem
     end
 
-    local upstream_keys = api.get_kv_blocking(consul_cluster, key_prefix .. upstreams_prefix .. "?keys", opts)
-    if not upstream_keys then
+    local opts = { type=store_config.type, block=true, cluster=store_cluster, operation="list", default={} }
+    local upstream_list = api.get(key_prefix .. upstreams_prefix, opts)
+    if type(upstream_list) ~= "table" then
         return false
     end
 
-    for _, key in ipairs(upstream_keys) do repeat
-        local skey = str_sub(key, #key_prefix + #upstreams_prefix + 2)
-        if #skey == 0 then
-            break
-        end
-
+    for skey, value in pairs(upstream_list) do repeat
         -- upstream already exists in config.lua
         if config[skey] then
             break
         end
 
-        local servers = api.get_kv_blocking(consul_cluster, key .. "?raw", opts)
+        local servers = utils.parse_body(value)
         if not servers or not next(servers) then
             return false
         end

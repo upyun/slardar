@@ -24,3 +24,5 @@ nginx/uwsgi_temp/*
 !nginx/conf/nginx.conf
 !nginx/conf/slardar*
 !nginx/conf/stream*
+
+config/*
