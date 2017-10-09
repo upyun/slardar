@@ -9,7 +9,6 @@ local ipairs        = ipairs
 local type          = type
 local str_format    = string.format
 local str_match     = string.match
-local tab_insert    = table.insert
 local decode_base64 = ngx.decode_base64
 local log           = ngx.log
 local ERR           = ngx.ERR
@@ -57,6 +56,10 @@ local valid_store = {
                 end
 
                 local nodes = node.nodes
+                if not nodes then
+                    return {}
+                end
+
                 if type(nodes) ~= "table" then
                     return nil, "nodes invalid"
                 end
