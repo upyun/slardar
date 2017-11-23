@@ -13,7 +13,7 @@ local ngx_subsystem= ngx.config.subsystem
 
 local get_shm_key  = subsystem.get_shm_key
 
-local _M = {}
+local _M = { _VERSION = '0.01' }
 
 
 -- get dynamic config from key-value store
