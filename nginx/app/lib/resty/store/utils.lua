@@ -4,7 +4,7 @@ local type         = type
 local next         = next
 local pairs        = pairs
 
-local _M = {}
+local _M = {  _VERSION = '0.01' }
 
 
 function _M.parse_body(body)

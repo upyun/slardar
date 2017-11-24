@@ -2,13 +2,19 @@
 
 local checkups  = require "resty.checkups.api"
 local balancer  = require "ngx.balancer"
+local subsystem = ngx.config.subsystem
 
 local get_last_failure = balancer.get_last_failure
 local set_current_peer = balancer.set_current_peer
 local set_more_tries = balancer.set_more_tries
 
+local skey
+if subsystem == 'http' then
+    skey = ngx.var.host
+elseif subsystem == 'stream' then
+    skey = ngx.var.server_port
+end
 
-local skey = ngx.var.host
 if not skey then
     return
 end

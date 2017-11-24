@@ -12,8 +12,9 @@ local setmetatable = setmetatable
 local ngx_subsystem= ngx.config.subsystem
 
 local get_shm_key  = subsystem.get_shm_key
+local get_shm      = subsystem.get_shm
 
-local _M = {}
+local _M = { _VERSION = '0.01' }
 
 
 -- get dynamic config from key-value store
@@ -37,7 +38,7 @@ local function load_config(config, key)
     end
 
     local config_cache = shcache:new(
-        ngx.shared.cache,
+        get_shm("cache"),
         { external_lookup = _load_config,
           encode = cmsgpack.pack,
           decode = cmsgpack.unpack,

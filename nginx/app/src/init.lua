@@ -7,7 +7,7 @@ local checkups = require "resty.checkups.api"
 
 slardar = require "config" -- global config variable
 
-slardar.global.version = "1.0.0"
+slardar.global.version = "1.1.0"
 
 slardar.exit = function(err)
     if ngx.headers_sent then

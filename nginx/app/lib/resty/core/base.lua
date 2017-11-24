@@ -4,9 +4,9 @@
 local ffi = require 'ffi'
 local ffi_new = ffi.new
 local error = error
-local setmetatable = setmetatable
-local floor = math.floor
+local select = select
 local ceil = math.ceil
+local subsystem = ngx.config.subsystem
 
 
 local str_buf_size = 4096
@@ -15,17 +15,31 @@ local size_ptr
 local FREE_LIST_REF = 0
 
 
-if not ngx.config
-   or not ngx.config.ngx_lua_version
-   or ngx.config.ngx_lua_version < 10001
-then
-    error("ngx_lua 0.10.1+ required")
+if subsystem == 'http' then
+    if not ngx.config
+       or not ngx.config.ngx_lua_version
+       or ngx.config.ngx_lua_version < 10011
+    then
+        error("ngx_http_lua_module 0.10.11+ required")
+    end
+
+elseif subsystem == 'stream' then
+    if not ngx.config
+       or not ngx.config.ngx_lua_version
+       or ngx.config.ngx_lua_version < 4
+    then
+        error("ngx_stream_lua_module 0.0.4+ required")
+    end
+
+else
+    error("ngx_http_lua_module 0.10.11+ or "
+          .. "ngx_stream_lua_module 0.0.4+ required")
 end
 
 
 if string.find(jit.version, " 2.0") then
-    ngx.log(ngx.WARN, "use of lua-resty-core with LuaJIT 2.0 is "
-            .. "not recommended; use LuaJIT 2.1+ instead")
+    ngx.log(ngx.ALERT, "use of lua-resty-core with LuaJIT 2.0 is ",
+            "not recommended; use LuaJIT 2.1+ instead")
 end
 
 
@@ -35,7 +49,8 @@ if not ok then
 end
 
 
-local ok, clear_tab = pcall(require, "table.clear")
+local clear_tab
+ok, clear_tab = pcall(require, "table.clear")
 if not ok then
     clear_tab = function (tab)
                     for k, _ in pairs(tab) do
@@ -73,31 +88,52 @@ if not pcall(ffi.typeof, "ngx_str_t") then
 end
 
 
-if not pcall(ffi.typeof, "ngx_http_request_t") then
-    ffi.cdef[[
-        struct ngx_http_request_s;
-        typedef struct ngx_http_request_s  ngx_http_request_t;
-    ]]
-end
+if subsystem == 'http' then
+    if not pcall(ffi.typeof, "ngx_http_request_t") then
+        ffi.cdef[[
+            struct ngx_http_request_s;
+            typedef struct ngx_http_request_s  ngx_http_request_t;
+        ]]
+    end
 
+    if not pcall(ffi.typeof, "ngx_http_lua_ffi_str_t") then
+        ffi.cdef[[
+            typedef struct {
+                int                       len;
+                const unsigned char      *data;
+            } ngx_http_lua_ffi_str_t;
+        ]]
+    end
 
-if not pcall(ffi.typeof, "ngx_http_lua_ffi_str_t") then
-    ffi.cdef[[
-        typedef struct {
-            int                       len;
-            const unsigned char      *data;
-        } ngx_http_lua_ffi_str_t;
-    ]]
+elseif subsystem == 'stream' then
+    if not pcall(ffi.typeof, "ngx_stream_lua_request_t") then
+        ffi.cdef[[
+            struct ngx_stream_lua_request_s;
+            typedef struct ngx_stream_lua_request_s  ngx_stream_lua_request_t;
+        ]]
+    end
+
+    if not pcall(ffi.typeof, "ngx_stream_lua_ffi_str_t") then
+        ffi.cdef[[
+            typedef struct {
+                int                       len;
+                const unsigned char      *data;
+            } ngx_stream_lua_ffi_str_t;
+        ]]
+    end
+
+else
+    error("unknown subsystem: " .. subsystem)
 end
 
 
 local c_buf_type = ffi.typeof("char[?]")
 
 
-local _M = new_tab(0, 16)
+local _M = new_tab(0, 17)
 
 
-_M.version = "0.1.5"
+_M.version = "0.1.13"
 _M.new_tab = new_tab
 _M.clear_tab = clear_tab
 
@@ -172,6 +208,19 @@ function _M.ref_in_table(tb, key)
 
     -- print("ref key_id returned ", ref)
     return ref
+end
+
+
+function _M.allows_subsystem(...)
+    local total = select("#", ...)
+
+    for i = 1, total do
+        if select(i, ...) == subsystem then
+            return
+        end
+    end
+
+    error("unsupported subsystem: " .. subsystem)
 end
 
 

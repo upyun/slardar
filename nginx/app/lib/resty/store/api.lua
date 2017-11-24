@@ -14,7 +14,7 @@ local log           = ngx.log
 local ERR           = ngx.ERR
 local INFO          = ngx.INFO
 
-local _M = {}
+local _M = { _VERSION = '0.01' }
 
 local valid_store = {
     etcd = {

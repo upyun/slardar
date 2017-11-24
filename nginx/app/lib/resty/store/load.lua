@@ -13,7 +13,7 @@ local str_sub      = string.sub
 local str_len      = string.len
 
 
-local _M = {}
+local _M = { _VERSION = '0.01' }
 local mt = { __index = _M }
 
 
