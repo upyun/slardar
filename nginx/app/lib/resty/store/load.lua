@@ -11,7 +11,12 @@ local tab_insert   = table.insert
 local str_format   = string.format
 local str_sub      = string.sub
 local str_len      = string.len
+local ngx_subsystem= ngx.config.subsystem
 
+local load_prefix = "lua"
+if ngx_subsystem ~= "http" then
+    load_prefix = "lua_" .. ngx_subsystem
+end
 
 local _M = { _VERSION = '0.01' }
 local mt = { __index = _M }
@@ -28,7 +33,7 @@ end
 function _M.list(self)
     local opts = { type=self.store_type, block=true, cluster=self.store_cluster,
         operation="list", default={} }
-    local list, err = api.get(str_format("%slua", self.prefix), opts)
+    local list, err = api.get(str_format("%s%s/", self.prefix, load_prefix), opts)
     if err then
         return nil, err
     end
@@ -40,7 +45,7 @@ end
 
 local function _get(store_cluster, store_type, prefix, key)
     local opts = { type=store_type, block=true, cluster=store_cluster }
-    local v, err = api.get(str_format("%slua/%s", prefix, key), opts)
+    local v, err = api.get(str_format("%s%s/%s", prefix, load_prefix, key), opts)
     if err then
         return nil, err
     end

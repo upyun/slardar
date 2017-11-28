@@ -2,6 +2,7 @@
 local bit           = require "bit"
 local cjson         = require "cjson.safe"
 local checkups      = require "resty.checkups.api"
+local mload         = require "resty.load"
 local utils         = require "modules.utils"
 
 local type          = type
@@ -43,7 +44,7 @@ local PROTOCOL_CONTINUE= 3
 local slardar = slardar
 
 local valid_method = { GET=true, PUT=true, DELETE=true }
-local valid_topic = { upstream=true }
+local valid_topic = { upstream=true, code=true }
 
 
 local function get_status()
@@ -108,6 +109,40 @@ end
 function _M.DELETE_upstream(name, body)
     local ok, err = checkups.delete_upstream(name)
     return ok, err
+end
+
+
+function _M.GET_code(name, body)
+    local skey = name
+    if skey == "info" then
+        skey = nil
+    end
+    return mload.get_version(skey)
+end
+
+
+function _M.POST_code(name, body)
+    return mload.set_code(name, body)
+end
+
+
+function _M.PUT_code(name, body)
+    return mload.install_code(name)
+end
+
+
+function _M.LOAD_code(name, body)
+    local ok, err = mload.set_code(name, body)
+    if err then
+        return nil, err
+    end
+
+    return mload.install_code(name)
+end
+
+
+function _M.DELETE_code(name, body)
+    return mload.uninstall_code(name)
 end
 
 

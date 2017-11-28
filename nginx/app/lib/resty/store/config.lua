@@ -61,9 +61,9 @@ function _M.init(config)
     local store_config = config.store or {}
     local key_prefix = store_config.config_key_prefix or ""
     local store_cluster = store_config.cluster or {}
-    local upstreams_prefix = "upstreams"
+    local upstreams_prefix = "upstreams/"
     if ngx_subsystem ~= "http" then
-        upstreams_prefix = "upstreams_" .. ngx_subsystem
+        upstreams_prefix = "upstreams_" .. ngx_subsystem .. "/"
     end
 
     local opts = { type=store_config.type, block=true, cluster=store_cluster, operation="list", default={} }
