@@ -3,6 +3,7 @@
 local cjson     = require "cjson.safe"
 local checkups  = require "resty.checkups.api"
 
+local type          = type
 local read_body     = ngx.req.read_body
 local get_body_data = ngx.req.get_body_data
 
@@ -22,16 +23,11 @@ function _M.update_upstream(skey)
         return ngx.HTTP_BAD_REQUEST, "decode body error"
     end
 
-    local upstream
-    if body.servers then
-        upstream = {{ servers = body.servers }}
-    elseif body.cluster then
-        upstream = body
-    else
+    if type(body.servers) ~= "table" and type(body.cluster) ~= "table" then
         return ngx.HTTP_BAD_REQUEST, "body invalid"
     end
 
-    local ok, err = checkups.update_upstream(skey, upstream)
+    local ok, err = checkups.update_upstream(skey, body)
     if not ok then
         return ngx.HTTP_BAD_REQUEST, err
     end

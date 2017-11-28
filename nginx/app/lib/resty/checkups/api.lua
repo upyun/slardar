@@ -233,14 +233,25 @@ local function gen_upstream(skey, upstream)
             return nil, "cluster invalid"
         end
     else
-        -- only servers
         local dyupstream, err = dyconfig.do_get_upstream(skey)
         if err then
             return nil, err
         end
 
         dyupstream = dyupstream or {}
-        dyupstream.cluster = upstream
+        if upstream.servers then
+            -- store config
+            for k, v in pairs(upstream) do
+                if k ~= "servers" then
+                    dyupstream[k] = v
+                else
+                    dyupstream.cluster = { { servers = v } }
+                end
+            end
+        else
+            -- only cluster
+            dyupstream.cluster = upstream
+        end
         ups = dyupstream
     end
 
