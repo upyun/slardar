@@ -1,5 +1,5 @@
 -- Copyright (C) 2014 Monkey Zhang (timebug)
-
+local subsystem     = require "resty.subsystem"
 
 local type = type
 local error = error
@@ -238,11 +238,10 @@ function _M.ssl_handshake(self, ...)
         return nil, "not initialized"
     end
 
-    if not ngx.config
-        or not ngx.config.ngx_lua_version
-        or ngx.config.ngx_lua_version < 9011
-    then
-        error("ngx_lua 0.9.11+ required")
+    local ok = subsystem.check_version(9011, 4)
+    if not ok then
+        error("ngx_http_lua_module 0.9.11+ or "
+          .. "ngx_stream_lua_module 0.0.4+ required")
     end
 
     return sock:sslhandshake(...)

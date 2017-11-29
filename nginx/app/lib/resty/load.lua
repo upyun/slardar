@@ -1,5 +1,7 @@
 -- Copyright (C) 2016 Libo Huang (huangnauh), UPYUN Inc.
 local cjson         = require "cjson.safe"
+local subsystem     = require "resty.subsystem"
+
 local setmetatable  = setmetatable
 local getfenv       = getfenv
 local setfenv       = setfenv
@@ -22,7 +24,9 @@ local log           = ngx.log
 local ERR           = ngx.ERR
 local INFO          = ngx.INFO
 local WARN          = ngx.WARN
-local load_dict     = ngx.shared.load
+
+local get_shm       = subsystem.get_shm
+local load_dict     = get_shm("load")
 
 local SKEYS_KEY     = "lua:skeys"
 local VERSION_KEY   = "lua:version"

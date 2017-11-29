@@ -1,4 +1,5 @@
-local checkups = require "resty.checkups.api"
+local checkups      = require "resty.checkups.api"
+local subsystem     = require "resty.subsystem"
 
 local concat                = table.concat
 local tcp                   = ngx.socket.tcp
@@ -9,12 +10,7 @@ local type                  = type
 local pairs                 = pairs
 local tostring              = tostring
 local debug                 = ngx.config.debug
-
 local DEBUG                 = ngx.DEBUG
-local NOTICE                = ngx.NOTICE
-local WARN                  = ngx.WARN
-local ERR                   = ngx.ERR
-local CRIT                  = ngx.CRIT
 
 
 local ok, new_tab = pcall(require, "table.new")
@@ -24,21 +20,11 @@ end
 
 local _M = new_tab(0, 5)
 
-local is_exiting
-
-if not ngx.config or not ngx.config.ngx_lua_version
-    or ngx.config.ngx_lua_version < 9003 then
-
-    is_exiting = function() return false end
-
-    ngx_log(CRIT, "We strongly recommend you to update your ngx_lua module to "
-            .. "0.9.3 or above. lua-resty-logger-socket will lose some log "
-            .. "messages when Nginx reloads if it works with ngx_lua module "
-            .. "below 0.9.3")
-else
+local is_exiting = function() return false end
+local ok = subsystem.check_version(9003, 4)
+if ok then
     is_exiting = ngx.worker.exiting
 end
-
 
 _M._VERSION = '0.03'
 
@@ -51,8 +37,8 @@ local host
 local sni_host
 local max_buffer_reuse      = 10000        -- reuse buffer for at most 10000
                                            -- times
-local periodic_flush        = nil
-local need_periodic_flush   = nil
+local periodic_flush
+local need_periodic_flush
 
 -- internal variables
 local buffer_size           = 0
