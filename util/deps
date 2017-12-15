@@ -33,6 +33,7 @@ get lua-cmsgpack $V_CMSGPACK https://github.com/cloudflare/lua-cmsgpack/archive/
 get luasocket $V_LUASOCKET https://github.com/diegonehab/luasocket/archive/v$V_LUASOCKET.tar.gz || exit 1
 get stream-lua-nginx-module $V_STREAM_LUA_NGX_MODULE https://github.com/huangnauh/stream-lua-nginx-module/archive/$V_STREAM_LUA_NGX_MODULE.tar.gz || exit 1
 get openssl $V_OPENSSL https://github.com/openssl/openssl/archive/OpenSSL_$V_OPENSSL.tar.gz || exit 1
+get zlib $V_ZLIB https://www.zlib.net/zlib-$V_ZLIB.tar.gz || exit 1
 
 # patch for nginx
 cd nginx-$V_NGINX
