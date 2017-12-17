@@ -43,7 +43,7 @@ WITH_SSL_MODULE= --with-http_ssl_module --with-openssl=$(ROOTDIR)/deps/openssl-O
 NGINX_DIR= deps/nginx-$(V_NGINX)
 default all: cjson cmsgpack luasocket
 	@echo "==== Building Nginx $(V_NGINX) ===="
-	cd $(NGINX_DIR) && $(MAKE) -j2
+	cd $(NGINX_DIR) && $(MAKE)
 	@echo "==== Successfully build Nginx $(V_NGINX) ===="
 
 INSTALL_LIBDIR=$(PREFIX)/nginx/app/lib/
@@ -52,6 +52,7 @@ configure: deps luajit
 	cd $(NGINX_DIR) && ./configure $(WITH_SSL_MODULE) \
 		--with-pcre=$(ROOTDIR)/deps/pcre-$(V_PCRE) \
 		--with-ld-opt="-Wl,-rpath,$(LUAJIT_LIB),-rpath,$(INSTALL_LIBDIR)" \
+		--with-zlib=$(ROOTDIR)/deps/zlib-$(V_ZLIB) \
 		--with-http_stub_status_module \
 		--with-stream \
 		--add-module=$(ROOTDIR)/deps/stream-lua-nginx-module-$(V_STREAM_LUA_NGX_MODULE) \
