@@ -43,9 +43,13 @@ local PROTOCOL_CONTINUE= 3
 
 local slardar = slardar
 
-local valid_method = { GET=true, PUT=true, DELETE=true }
-local valid_topic = { upstream=true, code=true }
+local NEED_BODY = 1
+local NO_BODY   = 2
 
+local valid_topic = {
+    upstream = { PUT=NEED_BODY, POST=NEED_BODY, GET=NO_BODY, DELETE=NO_BODY },
+    code     = { PUT=NO_BODY, POST=NEED_BODY, GET=NO_BODY, DELETE=NO_BODY, LOAD=NEED_BODY },
+}
 
 local function get_status()
     local result = checkups.get_status()
@@ -77,6 +81,11 @@ end
 
 
 function _M.PUT_upstream(name, body)
+    local body = cjson.decode(body)
+    if type(body) ~= "table" then
+        return false, "invalid body"
+    end
+
     local upstream
     if body.servers then
         upstream = {{ servers = body.servers }}
@@ -182,12 +191,13 @@ local function handle_command(self)
     end
 
     local method, topic, name = upper(commands[1]), lower(commands[2]), commands[3]
-    if not valid_method[method] then
-        return { code=PROTOCOL_ERROR, message="method invalid" }
+    local t = valid_topic[topic]
+    if not t then
+        return { code=PROTOCOL_ERROR, message="topic invalid" }
     end
 
-    if not valid_topic[topic] then
-        return { code=PROTOCOL_ERROR, message="topic invalid" }
+    if not t[method] then
+        return { code=PROTOCOL_ERROR, message="method invalid" }
     end
 
     if str_sub(name, -1) == "\r" then
@@ -199,7 +209,8 @@ end
 
 
 local function need_body(command)
-    return command.method == "PUT"
+    local t = valid_topic[command.topic]
+    return t[command.method] == NEED_BODY
 end
 
 
@@ -223,12 +234,7 @@ local function handle_body(self)
     end
     log(INFO, "read body: ", data)
 
-    local body = cjson.decode(data)
-    if type(body) ~= "table" then
-        return { code=PROTOCOL_ERROR, message="body invalid" }
-    end
-
-    return { code=PROTOCOL_CONTINUE, body=body }
+    return { code=PROTOCOL_CONTINUE, body=data }
 end
 
 
