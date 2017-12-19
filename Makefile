@@ -25,6 +25,10 @@ else
 PLAT=linux
 endif
 
+ifeq ($(shell uname -m), x86_64)
+export KERNEL_BITS=64
+endif
+
 export LUAJIT_LIB= $(PREFIX)/luajit/lib
 export LUAJIT_INC= $(PREFIX)/luajit/include/luajit-2.1
 
@@ -37,7 +41,7 @@ RMDIR= rmdir 2>/dev/null
 INSTALL_F= install -m 0644
 UNINSTALL= $(RM)
 
-WITH_SSL_MODULE= --with-http_ssl_module --with-openssl=$(ROOTDIR)/deps/openssl-OpenSSL_$(V_OPENSSL)
+WITH_SSL_MODULE= --with-http_ssl_module --with-stream_ssl_module --with-openssl=$(ROOTDIR)/deps/openssl-OpenSSL_$(V_OPENSSL)
 ##############################################################################
 
 NGINX_DIR= deps/nginx-$(V_NGINX)
