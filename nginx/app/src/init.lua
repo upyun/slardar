@@ -9,7 +9,7 @@ local subsystem = ngx.config.subsystem
 
 slardar = require "config" -- global config variable
 
-slardar.global.version = "1.1.1"
+slardar.global.version = "1.1.2"
 
 if subsystem == 'http' then
     slardar.exit = function(err)

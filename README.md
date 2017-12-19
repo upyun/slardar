@@ -29,7 +29,7 @@ Table of Contents
 Description
 ===========
 
-Slardar is a HTTP load balancer based on [Nginx](http://nginx.org/) and [lua-nginx-module](https://github.com/openresty/lua-nginx-module), by which you can update your upstream list and run lua scripts without reloading Nginx.
+Slardar is a HTTP load balancer based on [Nginx](http://nginx.org/), [lua-nginx-module](https://github.com/openresty/lua-nginx-module) and [stream-lua-nginx-module](https://github.com/openresty/stream-lua-nginx-module), by which you can update your upstream list and run lua scripts without reloading Nginx.
 
 This bundle is maintained by UPYUN(又拍云) Inc.
 
