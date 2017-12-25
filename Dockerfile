@@ -2,7 +2,7 @@ FROM centos:6
 
 RUN yum -y update && yum clean all
 RUN yum -y install epel-release; yum clean all
-RUN yum -y install wget gcc gcc-c++ patch zlib-devel && yum clean all
+RUN yum -y install wget gcc gcc-c++ patch zlib-devel perl && yum clean all
 
 ADD patches /src/patches
 ADD util /src/util
