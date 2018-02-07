@@ -174,7 +174,7 @@ _M.consul = {
     -- negative cache ttl(in seconds) for dynamic configurations from consul.
     config_negative_ttl = 5,
     
-    -- do not cache dynamic configurations from consul.
+    -- cache dynamic configurations from consul.
     config_cache_enable = true,
 
     cluster = {
