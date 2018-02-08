@@ -174,7 +174,7 @@ _M.consul = {
     -- negative cache ttl(in seconds) for dynamic configurations from consul.
     config_negative_ttl = 5,
     
-    -- do not cache dynamic configurations from consul.
+    -- cache dynamic configurations from consul.
     config_cache_enable = true,
 
     cluster = {
@@ -428,7 +428,7 @@ Load a loa script
 ```
 $ curl 127.0.0.1:1995/lua/script.node-dev.example.com -d 'if ngx.get_method() == "DELETE" then return ngx.exit(403) end'
 "ok"
-$ curl -XPUT 127.0.0.1:1995/lua/script.test
+$ curl -XPUT 127.0.0.1:1995/lua/script.node-dev.example.com
 ```
 
 The script is taking effect.
