@@ -423,10 +423,10 @@ $ curl 127.0.0.1:8080/ -H "Host: node-dev.example.com"
 hello world
 ```
 
-Load a loa script
+Load a lua script
 
 ```
-$ curl 127.0.0.1:1995/lua/script.node-dev.example.com -d 'if ngx.get_method() == "DELETE" then return ngx.exit(403) end'
+$ curl 127.0.0.1:1995/lua/script.node-dev.example.com -d 'if ngx.req.get_method() == "DELETE" then return ngx.exit(403) end'
 "ok"
 $ curl -XPUT 127.0.0.1:1995/lua/script.node-dev.example.com
 ```
